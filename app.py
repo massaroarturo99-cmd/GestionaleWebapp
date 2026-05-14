@@ -632,16 +632,18 @@ def veicolo_detail(id):
         acconto = float(request.form.get('acconto') or 0.0)
         riconsegnata = 1 if request.form.get('riconsegnata') else 0
 
-        # Auto-update status to SALDATO if totals match
-        if acconto == totale and totale > 0:
-            stato = 'SALDATO'
-
         controparte_nome = (request.form.get('controparte_nome') or '').upper()
         controparte_telefono = request.form.get('controparte_telefono')
 
-        # Auto-update status to SALDATO if totals match
-        if acconto == totale and totale > 0:
-            stato = 'SALDATO'
+        # Auto-update status based on delivery and totals
+        if riconsegnata == 1:
+            if acconto == totale and totale > 0:
+                stato = 'SALDATO'
+            elif acconto != totale:
+                stato = 'SOSPESO'
+        else:
+            if acconto == totale and totale > 0:
+                stato = 'SALDATO'
 
         db.execute('''
             UPDATE veicoli SET
