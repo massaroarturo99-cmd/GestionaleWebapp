@@ -30,7 +30,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
                 telefono TEXT,
-                note TEXT
+                note TEXT,
+                categoria TEXT DEFAULT 'Materiale'
             )
         ''')
 
@@ -85,7 +86,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
                 telefono TEXT,
-                note TEXT
+                note TEXT,
+                categoria TEXT DEFAULT 'Materiale'
             )
         ''')
         db.execute('''
@@ -151,6 +153,12 @@ def migrate_db():
         ''')
         db.commit()
 
+    try:
+        db.execute("SELECT categoria FROM fornitori LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE fornitori ADD COLUMN categoria TEXT DEFAULT 'Materiale'")
+        db.commit()
+
     # Try to verify if fornitori tables exist (migration for older dbs)
     try:
         db.execute("SELECT id FROM fornitori LIMIT 1")
@@ -160,7 +168,8 @@ def migrate_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
                 telefono TEXT,
-                note TEXT
+                note TEXT,
+                categoria TEXT DEFAULT 'Materiale'
             )
         ''')
         db.execute('''
@@ -924,8 +933,9 @@ def fornitore_nuovo():
     nome = (request.form.get('nome') or '').upper()
     telefono = request.form.get('telefono')
     note = request.form.get('note')
+    categoria = request.form.get('categoria') or 'Materiale'
 
-    cursor = db.execute('INSERT INTO fornitori (nome, telefono, note) VALUES (?, ?, ?)', (nome, telefono, note))
+    cursor = db.execute('INSERT INTO fornitori (nome, telefono, note, categoria) VALUES (?, ?, ?, ?)', (nome, telefono, note, categoria))
     db.commit()
     return redirect(url_for('fornitore_detail', id=cursor.lastrowid))
 
