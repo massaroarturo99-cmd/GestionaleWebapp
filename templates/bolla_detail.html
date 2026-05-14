@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block header_title %}Bolla: {{ bolla.codice }} - {{ bolla.fornitore_nome }}{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border gap-4">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-invoice text-blue-500"></i> Bolla: {{ bolla.codice }}</h2>
+        <p class="text-gray-500 text-sm">Fornitore: {{ bolla.fornitore_nome }} | Data: {{ bolla.data }}</p>
+    </div>
+    <div class="flex space-x-2">
+        <a href="/fornitore/{{ bolla.fornitore_id }}" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded shadow font-bold text-sm transition-colors">
+            <i class="fas fa-arrow-left"></i> Torna al Fornitore
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Colonna Inserimento -->
+    <div class="lg:col-span-1 flex flex-col gap-6">
+        <!-- Modifica Intestazione Bolla -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-yellow-400">
+            <h3 class="text-sm font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-edit"></i> Modifica Dati Bolla</h3>
+            <form method="POST" action="/bolla/{{ bolla.id }}">
+                <div class="mb-2">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Codice</label>
+                    <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="codice" type="text" inputmode="numeric" pattern="[0-9]*" value="{{ bolla.codice }}">
+                </div>
+                <div class="mb-2">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Data</label>
+                    <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="data" type="date" value="{{ bolla.data }}">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Note</label>
+                    <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="note" type="text" value="{{ bolla.note or '' }}">
+                </div>
+                <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-2 px-4 rounded transition-colors text-sm">
+                    Aggiorna Testata
+                </button>
+            </form>
+        </div>
+
+        <!-- Inserisci Riga Prodotto -->
+        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-blue-500" x-data="{ mode: 'list' }">
+            <h3 class="text-sm font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-plus"></i> Aggiungi Riga Prodotto</h3>
+
+            <div class="flex space-x-2 mb-4 text-xs font-bold">
+                <button type="button" @click="mode = 'list'" :class="mode === 'list' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'" class="flex-1 py-2 rounded transition-colors">Dal Listino</button>
+                <button type="button" @click="mode = 'custom'" :class="mode === 'custom' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'" class="flex-1 py-2 rounded transition-colors">Nuovo/Al volo</button>
+            </div>
+
+            <form method="POST" action="/bolla/{{ bolla.id }}/prodotto/nuovo">
+
+                <!-- Da Listino -->
+                <div x-show="mode === 'list'">
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Seleziona Prodotto *</label>
+                        <select class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="prodotto_id" :required="mode === 'list'">
+                            <option value="">-- Seleziona --</option>
+                            {% for p in prodotti_fornitore %}
+                            <option value="{{ p.id }}">{{ p.nome }} (€{{ "%.2f"|format(p.prezzo_listino) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Personalizzato / Al volo -->
+                <div x-show="mode === 'custom'" style="display: none;">
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Nome Nuovo Prodotto *</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="custom_nome" type="text" placeholder="Nome prodotto che verrà salvato a listino..." :required="mode === 'custom'">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Prezzo Listino / Base (€)</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="custom_prezzo" type="number" step="0.01" inputmode="decimal" value="0.00">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Quantità *</label>
+                        <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm font-bold text-center" name="quantita" type="number" min="1" value="1">
+                    </div>
+                    <div x-show="mode === 'list'">
+                        <label class="block text-gray-700 text-xs font-bold mb-1" title="Lascia vuoto per usare il listino base">Prezzo Forzato (€)</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm text-right" name="prezzo_applicato" type="number" step="0.01" inputmode="decimal" placeholder="Listino">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2">
+                    <i class="fas fa-cart-plus"></i> <span>Aggiungi alla Bolla</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Colonna Contenuto Bolla -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-list-ul text-gray-500"></i> Righe Prodotti Inseriti</h3>
+            </div>
+
+            <div class="overflow-x-auto flex-1 p-0">
+                <table class="min-w-full leading-normal">
+                    <thead class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <tr>
+                            <th class="px-5 py-3">Q.tà</th>
+                            <th class="px-5 py-3">Prodotto</th>
+                            <th class="px-5 py-3 text-right">Cad. (€)</th>
+                            <th class="px-5 py-3 text-right">Totale Riga (€)</th>
+                            <th class="px-5 py-3 text-center">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_bolla = namespace(value=0) %}
+                        {% for r in righe %}
+                        {% set tot_riga = r.quantita * r.prezzo_applicato %}
+                        {% set total_bolla.value = total_bolla.value + tot_riga %}
+                        <tr class="hover:bg-blue-50 transition-colors border-b border-gray-200">
+                            <td class="px-5 py-3 whitespace-nowrap text-center font-bold text-gray-800 bg-gray-50 w-12">{{ r.quantita }}</td>
+                            <td class="px-5 py-3 font-semibold text-gray-900">{{ r.nome }}</td>
+                            <td class="px-5 py-3 text-right text-gray-600 text-sm">€ {{ "%.2f"|format(r.prezzo_applicato) }}</td>
+                            <td class="px-5 py-3 text-right font-bold text-green-700">€ {{ "%.2f"|format(tot_riga) }}</td>
+                            <td class="px-5 py-3 whitespace-nowrap text-center text-sm font-medium w-16">
+                                <a href="/bolla/riga/{{ r.id }}/modifica" class="text-blue-500 hover:text-blue-700 p-1 mr-2"><i class="fas fa-edit"></i></a>
+                                <form method="POST" action="/bolla/riga/{{ r.id }}/elimina" class="inline">
+                                    <button type="submit" class="text-red-400 hover:text-red-700 p-1"><i class="fas fa-times"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="px-5 py-8 text-center text-gray-500">La bolla è attualmente vuota.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-gray-800 p-4 text-white flex justify-between items-center rounded-b-xl">
+                <span class="text-sm uppercase tracking-wider font-bold">Totale Generale Bolla:</span>
+                <span class="text-2xl font-black">€ {{ "%.2f"|format(total_bolla.value) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

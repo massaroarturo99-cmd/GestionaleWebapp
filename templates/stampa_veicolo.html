@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stampa - {{ veicolo.targa }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: white; font-size: 10pt; color: black; }
+        @media print {
+            .no-print { display: none !important; }
+            @page { margin: 0.5cm; size: A4; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-border { border: 1px solid #000; }
+
+            /* Prevent page breaks inside important containers */
+            .flex, .grid, .mb-6, .mb-8, table {
+                page-break-inside: avoid;
+            }
+
+            /* Tighten up spacing for print to ensure it fits on one page */
+            body.p-8 { padding: 0 !important; }
+            .header-box { padding-bottom: 5px; margin-bottom: 5px; }
+            .mb-6 { margin-bottom: 10px; }
+            .mb-8 { margin-bottom: 10px; }
+            .mt-12 { margin-top: 10px; }
+            .mt-16 { margin-top: 15px; }
+            .min-h-[150px] { min-height: 50px; }
+        }
+        .header-box { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+    </style>
+</head>
+<body class="p-8 max-w-4xl mx-auto">
+
+    <div class="no-print mb-8 flex justify-between items-center bg-gray-100 p-4 rounded-lg">
+        <p class="text-gray-600 font-bold"><i class="fas fa-info-circle"></i> Modalità Stampa: {% if tipo == 'officina' %}SCHEDA LAVORI INTERNA{% else %}PREVENTIVO/RICEVUTA CLIENTE{% endif %}</p>
+        <button onclick="window.print()" class="bg-blue-600 text-white px-6 py-2 rounded font-bold shadow hover:bg-blue-700">STAMPA ORA</button>
+    </div>
+
+    <!-- Intestazione Officina -->
+    <header class="header-box flex justify-between items-end">
+        <div class="flex items-center space-x-4">
+            <img src="/static/images/Logo_Bianco.jpeg" alt="Massaro Group Logo" class="h-20">
+            <div>
+                <h1 class="text-3xl font-black tracking-wider text-blue-900">Massaro Group</h1>
+                <p class="text-gray-600 text-sm mt-1">Via. G. Marconi 64, 81030, Casapesenna (CE)</p>
+                <p class="text-gray-600 text-sm">Cell. 3246815628/ P.IVA 04583370616</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <h2 class="text-xl font-bold uppercase text-gray-800">
+                {% if tipo == 'officina' %}SCHEDA LAVORI{% else %}PREVENTIVO RIPARAZIONE{% endif %}
+            </h2>
+            <p class="text-sm">Data: <span id="print-date"></span></p>
+            <p class="text-sm font-bold mt-2">Pratica N. {{ veicolo.id }} / {{ veicolo.data_arrivo[:4] if veicolo.data_arrivo else '2024' }}</p>
+        </div>
+    </header>
+
+    <!-- Dati Veicolo e Cliente -->
+    <div class="flex border-2 border-gray-800 rounded-lg overflow-hidden mb-6">
+        <div class="w-1/2 p-4 border-r-2 border-gray-800 bg-gray-50">
+            <h3 class="font-bold border-b border-gray-300 pb-1 mb-2 text-sm uppercase">Dati Veicolo</h3>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div><span class="text-gray-500 block text-xs">Targa</span><span class="font-bold text-lg uppercase">{{ veicolo.targa }}</span></div>
+                <div><span class="text-gray-500 block text-xs">Marca/Modello</span><span class="font-semibold">{{ veicolo.marca or '-' }} {{ veicolo.modello or '' }}</span></div>
+                <div><span class="text-gray-500 block text-xs">Data Arrivo</span><span>{{ veicolo.data_arrivo or '-' }}</span></div>
+                <div><span class="text-gray-500 block text-xs">Data Consegna Prev.</span><span>{{ veicolo.data_consegna_prevista or '-' }}</span></div>
+            </div>
+        </div>
+        <div class="w-1/2 p-4 bg-gray-50">
+            <h3 class="font-bold border-b border-gray-300 pb-1 mb-2 text-sm uppercase">Dati Cliente</h3>
+            <div class="text-sm">
+                <div class="mb-2"><span class="text-gray-500 inline-block w-24">Nome:</span><span class="font-bold text-base">{{ veicolo.cliente_nome or '__________________________' }}</span></div>
+                <div class="mb-2"><span class="text-gray-500 inline-block w-24">Telefono:</span><span>{{ veicolo.cliente_telefono or '__________________________' }}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lavorazioni -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div>
+            <h3 class="font-bold text-lg bg-gray-200 p-2 border-l-4 border-gray-800 mb-2">SOSTITUZIONE</h3>
+            <div class="border border-gray-300 p-4 min-h-[150px] whitespace-pre-wrap">{{ veicolo.lavorazioni_sostituzione or '' }}</div>
+        </div>
+        <div>
+            <h3 class="font-bold text-lg bg-gray-200 p-2 border-l-4 border-gray-800 mb-2">RIPRISTINO E VERNICIATURA</h3>
+            <div class="border border-gray-300 p-4 min-h-[150px]">
+                {% if ripristino_righe %}
+                    <ul class="list-disc pl-5 space-y-1">
+                    {% for r in ripristino_righe %}
+                        <li>{{ r.descrizione }} <strong>[{{ r.gravita }}]</strong></li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="whitespace-pre-wrap">{{ veicolo.lavorazioni_ripristino or '' }}</div>
+                {% endif %}
+            </div>
+            <p class="text-xs text-gray-500 mt-1">SF: Sfumatura | L: Lieve | M: Medio | G: Grave</p>
+        </div>
+    </div>
+
+    <!-- Ricambi Associati -->
+    {% if ricambi %}
+    <div class="mb-8">
+        <h3 class="font-bold text-lg bg-gray-200 p-2 border-l-4 border-gray-800 mb-2">RICAMBI E MATERIALI</h3>
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b-2 border-gray-800 text-sm">
+                    <th class="py-2">Descrizione</th>
+                    <th class="py-2 text-center w-24">Q.tà</th>
+                    {% if tipo == 'cliente' %}
+                    <th class="py-2 text-right w-32">Importo (€)</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in ricambi %}
+                <tr class="border-b border-gray-300 text-sm">
+                    <td class="py-2 font-medium">{{ r.nome }}</td>
+                    <td class="py-2 text-center">1</td>
+                    {% if tipo == 'cliente' %}
+                    <td class="py-2 text-right">{{ "%.2f"|format(r.prezzo) }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Totali (Solo per tipo CLIENTE) -->
+    {% if tipo == 'cliente' %}
+    <div class="flex justify-end mt-4">
+        <div class="w-64 border-t-2 border-gray-800 pt-2">
+            <div class="flex justify-between mb-1">
+                <span class="text-gray-600 text-sm font-bold">Acconto Versato:</span>
+                <span>€ {{ "%.2f"|format(veicolo.acconto or 0) }}</span>
+            </div>
+            <div class="flex justify-between text-lg font-black bg-gray-100 p-1 rounded">
+                <span>TOTALE:</span>
+                <span>€ {{ "%.2f"|format(veicolo.totale or 0) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 text-[10px] text-gray-500 text-center border-t pt-2">
+        Il presente documento ha valore di preventivo se la vettura non è stata riconsegnata, e di ricevuta non fiscale altrimenti.<br>
+        Firma Cliente per accettazione: ____________________________________
+    </div>
+    {% else %}
+    <!-- Spazio Appunti per Operai -->
+    <div class="mt-4">
+        <h3 class="font-bold text-sm mb-2">APPUNTI OPERAIO / LAVORI EXTRA RISCONTRATI:</h3>
+        <div class="border-b border-gray-400 border-dashed w-full h-6 mb-2"></div>
+        <div class="border-b border-gray-400 border-dashed w-full h-6 mb-2"></div>
+    </div>
+    <div class="mt-4 text-[10px] text-gray-500 text-center border-t pt-2">
+        Scheda ad uso interno officina. Da compilare a cura del meccanico incaricato e riconsegnare in segreteria.
+    </div>
+    {% endif %}
+
+    <script>
+        document.getElementById('print-date').textContent = new Date().toLocaleDateString('it-IT');
+
+        // Auto-print option for iPad convenience
+        window.onload = function() {
+            // Uncomment next line to automatically open print dialog when page loads
+            // window.print();
+        }
+    </script>
+</body>
+</html>

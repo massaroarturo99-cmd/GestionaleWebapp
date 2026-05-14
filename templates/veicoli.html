@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block header_title %}Lista Veicoli{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+    <!-- Filtri (Tabs) -->
+    <div class="inline-flex bg-gray-200 rounded-lg p-1">
+        <a href="/veicoli?filtro=tutti&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'tutti' %}bg-white shadow text-gray-800{% else %}text-gray-600 hover:text-gray-800{% endif %}">Tutti</a>
+        <a href="/veicoli?filtro=preventivi&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'preventivi' %}bg-white shadow text-gray-800{% else %}text-gray-600 hover:text-gray-800{% endif %}">Preventivi</a>
+        <a href="/veicoli?filtro=lavorazione&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'lavorazione' %}bg-white shadow text-gray-800{% else %}text-gray-600 hover:text-gray-800{% endif %}">In Lavorazione</a>
+        <a href="/veicoli?filtro=saldati&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'saldati' %}bg-white shadow text-gray-800{% else %}text-gray-600 hover:text-gray-800{% endif %}">Saldati</a>
+        <a href="/veicoli?filtro=sospesi&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'sospesi' %}bg-white shadow text-gray-800{% else %}text-gray-600 hover:text-gray-800{% endif %}">Sospesi</a>
+        <a href="/veicoli?filtro=pagamenti&ord={{ ordinamento }}" class="px-4 py-2 rounded-md text-sm font-medium transition-colors {% if filtro == 'pagamenti' %}bg-red-500 shadow text-white{% else %}text-red-600 hover:text-red-800{% endif %}">Pagamenti ⚠️</a>
+    </div>
+
+    <!-- Ordinamento e Nuovo -->
+    <div class="flex items-center space-x-3">
+        <div class="relative">
+            <select onchange="window.location.href='/veicoli?filtro={{ filtro|urlencode }}&ord=' + this.value" class="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500 shadow-sm text-sm">
+                <option value="data" {% if ordinamento == 'data' %}selected{% endif %}>Ordina per Data Inserimento</option>
+                <option value="targa" {% if ordinamento == 'targa' %}selected{% endif %}>Ordina per Targa</option>
+                <option value="marca" {% if ordinamento == 'marca' %}selected{% endif %}>Ordina per Marca</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <i class="fas fa-chevron-down text-xs"></i>
+            </div>
+        </div>
+
+        <a href="/veicolo/nuovo" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition-colors flex items-center space-x-2">
+            <i class="fas fa-plus"></i> <span>Nuovo</span>
+        </a>
+    </div>
+</div>
+
+<!-- Tabella Veicoli -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full leading-normal">
+            <thead>
+                <tr class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th class="px-5 py-3 border-b-2 border-gray-200">Targa</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200">Veicolo</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200">Stato</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200">Cliente</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200">Data Arrivo</th>
+                    <th class="px-5 py-3 border-b-2 border-gray-200 text-right">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in veicoli %}
+                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-200">
+                    <td class="px-5 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="bg-gray-800 text-white font-mono px-3 py-1 rounded-sm shadow-sm font-bold border border-gray-900 tracking-widest text-sm">
+                                {{ v.targa }}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-4 whitespace-nowrap">
+                        <p class="text-gray-900 whitespace-no-wrap font-semibold">{{ v.marca or 'N/D' }} {{ v.modello or '' }}</p>
+                    </td>
+                    <td class="px-5 py-4 whitespace-nowrap">
+                        {% if v.riconsegnata %}
+                            <span class="relative inline-block px-3 py-1 font-semibold text-gray-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-gray-200 rounded-full"></span>
+                                <span class="relative text-xs">RICONSEGNATA</span>
+                            </span>
+                        {% elif v.stato == 'PREVENTIVO' %}
+                            <span class="relative inline-block px-3 py-1 font-semibold text-yellow-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-yellow-200 rounded-full"></span>
+                                <span class="relative text-xs">PREVENTIVO</span>
+                            </span>
+                        {% elif v.stato == 'IN LAVORAZIONE' %}
+                            <span class="relative inline-block px-3 py-1 font-semibold text-green-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-green-200 opacity-50 rounded-full"></span>
+                                <span class="relative text-xs">IN LAVORAZIONE</span>
+                            </span>
+                        {% elif v.stato == 'SALDATO' %}
+                            <span class="relative inline-block px-3 py-1 font-semibold text-purple-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-purple-200 opacity-50 rounded-full"></span>
+                                <span class="relative text-xs">SALDATO</span>
+                            </span>
+                        {% else %}
+                            <span class="relative inline-block px-3 py-1 font-semibold text-red-900 leading-tight">
+                                <span aria-hidden class="absolute inset-0 bg-red-200 opacity-50 rounded-full"></span>
+                                <span class="relative text-xs">SOSPESO</span>
+                            </span>
+                        {% endif %}
+
+                        {% if v.riconsegnata and v.totale != v.acconto %}
+                            <span class="ml-2 text-red-500 font-bold" title="Importo da saldare"><i class="fas fa-exclamation-circle"></i> € {{ "%.2f"|format(v.totale - v.acconto) }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-4 whitespace-nowrap">
+                        <p class="text-gray-900 whitespace-no-wrap">{{ v.cliente_nome or 'Nessun cliente' }}</p>
+                    </td>
+                    <td class="px-5 py-4 whitespace-nowrap">
+                        <p class="text-gray-900 whitespace-no-wrap">{{ v.data_arrivo or 'N/D' }}</p>
+                    </td>
+                    <td class="px-5 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end space-x-2">
+                        <a href="/veicolo/{{ v.id }}" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-2 rounded-lg transition-colors inline-block" title="Apri Scheda">
+                            <i class="fas fa-folder-open"></i>
+                        </a>
+                        <form action="/veicolo/{{ v.id }}/foto_veloce" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
+                            <input type="file" name="foto" accept="image/*" multiple required class="hidden" id="file-upload-{{ v.id }}" onchange="this.form.submit()">
+                            <label for="file-upload-{{ v.id }}" class="cursor-pointer text-green-600 hover:text-green-900 bg-green-50 px-3 py-2 rounded-lg transition-colors inline-block" title="Aggiungi Foto">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                        </form>
+                        <form action="/veicolo/{{ v.id }}/elimina" method="POST" >
+                            <button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-2 rounded-lg transition-colors" title="Elimina Scheda">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-5 py-10 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-car-crash text-4xl mb-3 text-gray-300"></i>
+                            <p class="text-lg">Nessun veicolo trovato in questa categoria.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 0; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 5px; vertical-align: top; text-align: left; }
+        .bordered th, .bordered td { border: 1px solid #aaa; }
+        .bg-light { background-color: #f4f4f4; font-weight: bold; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .section-title { font-size: 14px; font-weight: bold; background-color: #333; color: #fff; padding: 5px; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <table>
+        <tr>
+            <td width="60%">
+                <h2 style="margin: 0;">Massaro Group Carrozzeria</h2>
+                <p style="margin: 5px 0;">Via G. Marconi 64, 81030, Casapesenna (CE)<br>
+                Cell. 3246815628 | P.IVA 04583370616</p>
+            </td>
+            <td width="40%" class="text-right">
+                <h3 style="margin: 0;">PREVENTIVO RIPARAZIONE</h3>
+                <p style="margin: 5px 0;">Data: {{ data_odierna }}<br>
+                Pratica N. {{ pratica_id }}/{{ anno }}</p>
+            </td>
+        </tr>
+    </table>
+
+    <table>
+        <tr>
+            <td width="48%">
+                <div class="section-title">DATI VEICOLO</div>
+                <table class="bordered">
+                    <tr><th width="40%" class="bg-light">Targa</th><td width="60%">{{ targa }}</td></tr>
+                    <tr><th class="bg-light">Marca/Modello</th><td>{{ marca }} {{ modello }}</td></tr>
+                    <tr><th class="bg-light">Data Arrivo</th><td>{{ data_arrivo }}</td></tr>
+                    <tr><th class="bg-light">Consegna Prev.</th><td>{{ data_consegna }}</td></tr>
+                </table>
+            </td>
+            <td width="4%"></td>
+            <td width="48%">
+                <div class="section-title">DATI CLIENTE</div>
+                <table class="bordered">
+                    <tr><th width="40%" class="bg-light">Nome</th><td width="60%">{{ nome_cliente }}</td></tr>
+                    <tr><th class="bg-light">Telefono</th><td>{{ telefono_cliente }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title">SOSTITUZIONE</div>
+    <p style="margin-top: 0; white-space: pre-wrap;">{{ testo_sostituzione }}</p>
+
+    <div class="section-title">RIPRISTINO E VERNICIATURA</div>
+    {% if testo_ripristino_html %}
+        <p style="margin-top: 0;">{{ testo_ripristino_html|safe }}</p>
+    {% else %}
+        <p style="margin-top: 0; white-space: pre-wrap;">{{ testo_ripristino }}</p>
+    {% endif %}
+    <p style="margin-top: 0;"><span style="font-size: 10px; color: #555;">Leggenda: SF: Sfumatura | L: Lieve | M: Medio | G: Grave</span></p>
+
+    <div class="section-title">RICAMBI E MATERIALI</div>
+    <table class="bordered">
+        <tr>
+            <th width="60%" class="bg-light">Descrizione</th>
+            <th width="15%" class="bg-light text-center">Q.tà</th>
+            <th width="25%" class="bg-light text-right">Importo (€)</th>
+        </tr>
+        {% if ricambi %}
+            {% for ricambio in ricambi %}
+            <tr>
+                <td>{{ ricambio.nome }}</td>
+                <td class="text-center">1</td>
+                <td class="text-right">{{ "%.2f"|format(ricambio.prezzo) }}</td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="3" class="text-center">Nessun ricambio inserito</td>
+            </tr>
+        {% endif %}
+    </table>
+
+    <table>
+        <tr>
+            <td width="60%"></td>
+            <td width="40%">
+                <table class="bordered">
+                    <tr><th class="bg-light">Acconto Versato:</th><td class="text-right">€ {{ acconto }}</td></tr>
+                    <tr><th class="bg-light">TOTALE:</th><td class="text-right" style="font-size: 16px; font-weight: bold;">€ {{ totale }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <p style="text-align: center; font-size: 10px; margin-top: 30px;">Il presente documento ha valore di preventivo se la vettura non è stata riconsegnata, e di ricevuta non fiscale altrimenti.</p>
+    <p class="text-right" style="margin-top: 40px;">Firma Cliente per accettazione: ________________________</p>
+
+</body>
+</html>

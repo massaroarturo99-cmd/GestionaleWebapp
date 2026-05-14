@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block header_title %}Scheda Veicolo: {{ veicolo.targa }}{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row xl:flex-row gap-6 ">
+
+    <!-- Colonna Sinistra: Form Modifica Dati -->
+    <div class="flex-1 bg-white rounded-xl shadow-md p-6 ">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-edit text-blue-500"></i> Dettagli Pratica</h3>
+            <div class="flex space-x-2">
+                {% set back_url = '/' if request.args.get('from_new') else (request.referrer or '/veicoli') %}
+                <a href="{{ back_url }}" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors" title="Indietro"><i class="fas fa-arrow-left"></i></a>
+                <form action="/veicolo/{{ veicolo.id }}/elimina" method="POST" >
+                    <button type="submit" class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors" title="Elimina Scheda"><i class="fas fa-trash-alt"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <form method="POST" action="/veicolo/{{ veicolo.id }}">
+            <input type="hidden" name="referrer" value="{{ back_url }}">
+            <!-- SEZIONE 1: Dati Base -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6 border">
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase"><i class="fas fa-car"></i> Veicolo e Cliente</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Targa</label>
+                        <input readonly class="bg-gray-200 appearance-none border rounded w-full py-2 px-3 text-gray-700 font-mono font-bold cursor-not-allowed" type="text" value="{{ veicolo.targa }}">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Marca</label>
+                        <datalist id="brands">
+                            <option value="Abarth">
+                            <option value="Alfa Romeo">
+                            <option value="Aston Martin">
+                            <option value="Audi">
+                            <option value="Bentley">
+                            <option value="BMW">
+                            <option value="Chevrolet">
+                            <option value="Citroën">
+                            <option value="Dacia">
+                            <option value="DR">
+                            <option value="Ferrari">
+                            <option value="Fiat">
+                            <option value="Ford">
+                            <option value="Honda">
+                            <option value="Hyundai">
+                            <option value="Jaguar">
+                            <option value="Jeep">
+                            <option value="Kia">
+                            <option value="Lamborghini">
+                            <option value="Lancia">
+                            <option value="Land Rover">
+                            <option value="Lexus">
+                            <option value="Maserati">
+                            <option value="Mazda">
+                            <option value="Mercedes-Benz">
+                            <option value="MG">
+                            <option value="Mini">
+                            <option value="Mitsubishi">
+                            <option value="Nissan">
+                            <option value="Opel">
+                            <option value="Peugeot">
+                            <option value="Porsche">
+                            <option value="Renault">
+                            <option value="Seat">
+                            <option value="Skoda">
+                            <option value="Smart">
+                            <option value="Subaru">
+                            <option value="Suzuki">
+                            <option value="Tesla">
+                            <option value="Toyota">
+                            <option value="Volkswagen">
+                            <option value="Volvo">
+                        </datalist>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="marca" type="text" list="brands" value="{{ veicolo.marca or '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="modello" type="text" value="{{ veicolo.modello or '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Anno</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="anno" type="text" value="{{ veicolo.anno or '' }}">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Proprietario / Cliente</label>
+                        <select class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="cliente_id">
+                            <option value="">Nessun cliente associato</option>
+                            {% for c in clienti %}
+                            <option value="{{ c.id }}" {% if veicolo.cliente_id == c.id %}selected{% endif %}>{{ c.nome }} {% if c.telefono %}({{ c.telefono }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <hr class="my-4 border-gray-200">
+
+                <div x-data="{ showControparte: {{ 'true' if veicolo.controparte_nome or veicolo.controparte_telefono else 'false' }} }">
+                    <label class="inline-flex items-center cursor-pointer mb-2">
+                        <input type="checkbox" class="form-checkbox text-blue-600 h-5 w-5" x-model="showControparte">
+                        <span class="ml-2 font-bold text-gray-800 text-sm uppercase"><i class="fas fa-handshake"></i> Controparte Presente</span>
+                    </label>
+
+                    <div x-show="showControparte" x-transition class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Nome e Cognome Controparte</label>
+                            <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="controparte_nome" type="text" value="{{ veicolo.controparte_nome or '' }}" placeholder="es. Luigi Bianchi">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Telefono Controparte</label>
+                            <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="controparte_telefono" type="text" value="{{ veicolo.controparte_telefono or '' }}" placeholder="es. 333 7654321">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SEZIONE 2: Stato e Lavorazioni -->
+            <div class="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase"><i class="fas fa-clipboard-list"></i> Officina</h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Stato Attuale</label>
+                        <select class="appearance-none border rounded w-full py-2 px-3 text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 {% if veicolo.stato == 'PREVENTIVO' %}bg-yellow-100 text-yellow-800{% elif veicolo.stato == 'IN LAVORAZIONE' %}bg-green-100 text-green-800{% elif veicolo.stato == 'SALDATO' %}bg-purple-100 text-purple-800{% else %}bg-red-100 text-red-800{% endif %}" name="stato">
+                            <option value="PREVENTIVO" {% if veicolo.stato == 'PREVENTIVO' %}selected{% endif %}>PREVENTIVO</option>
+                            <option value="IN LAVORAZIONE" {% if veicolo.stato == 'IN LAVORAZIONE' %}selected{% endif %}>IN LAVORAZIONE</option>
+                            <option value="SALDATO" {% if veicolo.stato == 'SALDATO' %}selected{% endif %}>SALDATO</option>
+                            <option value="SOSPESO" {% if veicolo.stato == 'SOSPESO' %}selected{% endif %}>SOSPESO</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Data Arrivo</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="data_arrivo" type="date" value="{{ veicolo.data_arrivo or '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Data Consegna Prevista</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="data_consegna_prevista" type="date" value="{{ veicolo.data_consegna_prevista or '' }}">
+                    </div>
+
+                    <div class="flex items-end">
+                        <label class="flex items-center space-x-3 bg-white p-2 rounded border w-full cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="checkbox" name="riconsegnata" class="form-checkbox h-5 w-5 text-blue-600 rounded" value="1" {% if veicolo.riconsegnata %}checked{% endif %}>
+                            <span class="text-gray-900 font-bold">Vettura Riconsegnata</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Sostituzione</label>
+                    <textarea rows="3" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="lavorazioni_sostituzione" placeholder="Elenco pezzi da sostituire...">{{ veicolo.lavorazioni_sostituzione or '' }}</textarea>
+                </div>
+
+                <div class="mb-2">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="block text-gray-700 text-xs font-bold">Ripristino e Verniciatura</label>
+                        <button type="button" onclick="addRipristinoRow()" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded shadow-sm hover:bg-blue-200">
+                            <i class="fas fa-plus"></i> Aggiungi Riga
+                        </button>
+                    </div>
+
+                    <div id="ripristino_container" class="space-y-2">
+                        {% if ripristino_righe %}
+                            {% for riga in ripristino_righe %}
+                            <div class="flex space-x-2 items-center">
+                                <input type="text" name="rip_desc[]" value="{{ riga.descrizione }}" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Descrizione...">
+                                <select name="rip_gravita[]" class="appearance-none border rounded w-24 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+                                    <option value="SF" {% if riga.gravita == 'SF' %}selected{% endif %}>SF (Sfumatura)</option>
+                                    <option value="L" {% if riga.gravita == 'L' %}selected{% endif %}>L (Lieve)</option>
+                                    <option value="M" {% if riga.gravita == 'M' %}selected{% endif %}>M (Medio)</option>
+                                    <option value="G" {% if riga.gravita == 'G' %}selected{% endif %}>G (Grave)</option>
+                                </select>
+                                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Empty row for new entry -->
+                            <div class="flex space-x-2 items-center">
+                                <input type="text" name="rip_desc[]" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Descrizione...">
+                                <select name="rip_gravita[]" class="appearance-none border rounded w-24 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+                                    <option value="SF">SF (Sfumatura)</option>
+                                    <option value="L">L (Lieve)</option>
+                                    <option value="M">M (Medio)</option>
+                                    <option value="G">G (Grave)</option>
+                                </select>
+                                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Leggenda: SF = Sfumatura, L = Lieve, M = Medio, G = Grave</p>
+                </div>
+            </div>
+
+            <!-- SEZIONE 3: Contabilità -->
+            <div class="bg-green-50 p-4 rounded-lg mb-6 border border-green-100">
+                <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase"><i class="fas fa-euro-sign"></i> Contabilità</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Totale Preventivato/Fatturato (€)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500">€</span>
+                            </div>
+                            <input class="appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 font-bold focus:outline-none focus:ring-1 focus:ring-blue-500 text-right text-lg" name="totale" type="number" step="0.01" value="{{ veicolo.totale or '0' }}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Acconto Ricevuto (€)</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500">€</span>
+                            </div>
+                            <input class="appearance-none border rounded w-full py-2 pl-8 pr-3 text-gray-700 font-bold text-green-600 focus:outline-none focus:ring-1 focus:ring-blue-500 text-right text-lg" name="acconto" type="number" step="0.01" value="{{ veicolo.acconto or '0' }}">
+                        </div>
+                    </div>
+                </div>
+
+                {% if veicolo.totale and veicolo.acconto != veicolo.totale %}
+                <div class="mt-4 p-3 {% if veicolo.totale > veicolo.acconto %}bg-red-100 text-red-800 border-red-200{% else %}bg-blue-100 text-blue-800 border-blue-200{% endif %} rounded border flex justify-between items-center font-bold">
+                    <span>DA SALDARE:</span>
+                    <span class="text-xl">€ {{ "%.2f"|format(veicolo.totale - veicolo.acconto) }}</span>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Azioni Salvataggio -->
+            <div class="sticky bottom-0 bg-white border-t pt-4 flex justify-between items-center z-10 pb-6 pb-safe">
+                <div>
+                    <!-- Menu Stampa -->
+                    <div class="relative inline-block" x-data="{ open: false }">
+                        <button type="button" onclick="document.getElementById('dropdownStampa').classList.toggle('hidden')" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded shadow flex items-center space-x-2 transition-colors">
+                            <i class="fas fa-print"></i> <span class="hidden md:inline">Stampa / PDF</span> <i class="fas fa-caret-up ml-1"></i>
+                        </button>
+
+                        <div id="dropdownStampa" class="hidden absolute bottom-full left-0 mb-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
+                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                                <a href="/veicolo/{{ veicolo.id }}/stampa?tipo=officina" target="_blank" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 border-b" role="menuitem">
+                                    <i class="fas fa-tools mr-2 text-gray-500"></i> Scheda Lavori (Per Operai)
+                                </a>
+                                <a href="/veicolo/{{ veicolo.id }}/stampa?tipo=cliente" target="_blank" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-bold" role="menuitem">
+                                    <i class="fas fa-user mr-2 text-blue-500"></i> Preventivo / Ricevuta (Per Cliente)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-colors flex items-center space-x-2 text-lg">
+                    <i class="fas fa-save"></i> <span>Salva Modifiche</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Colonna Destra: Foto e Ricambi -->
+    <div class="w-full lg:w-1/3 xl:w-1/3 flex flex-col gap-6">
+
+        <!-- FOTO -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col">
+            <div class="bg-blue-800 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fas fa-camera text-blue-300"></i> Foto Google Drive</h3>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-b">
+                <form action="/veicolo/{{ veicolo.id }}/foto" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
+                    <input type="file" name="foto" accept="image/*" multiple required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <button type="submit" class="bg-blue-600 text-white p-2 rounded shadow hover:bg-blue-700"><i class="fas fa-upload"></i></button>
+                </form>
+            </div>
+
+            <div class="p-4 max-h-[40vh] overflow-y-auto grid grid-cols-2 gap-2" style="-webkit-overflow-scrolling: touch;">
+                {% if photos %}
+                    {% for p in photos %}
+                    <div class="relative group border rounded p-1 bg-white">
+                        <a href="{{ p.webViewLink }}" target="_blank">
+                            <img src="{{ p.thumbnailLink }}" class="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80 transition">
+                        </a>
+                        <form action="/veicolo/{{ veicolo.id }}/foto/elimina" method="POST" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition" >
+                            <input type="hidden" name="file_id" value="{{ p.id }}">
+                            <button type="submit" class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow"><i class="fas fa-times text-xs"></i></button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-span-2 text-center text-gray-500 py-4">
+                        <p class="text-sm">Nessuna foto trovata su Drive per questa targa.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RICAMBI -->
+        <div class="bg-white rounded-xl shadow-md flex-1 flex flex-col">
+            <div class="bg-gray-800 p-4 text-white">
+                <h3 class="font-bold text-lg"><i class="fas fa-box-open text-yellow-400"></i> Ricambi Associati</h3>
+            </div>
+
+            <div class="p-4 flex-1 bg-gray-50 max-h-[40vh] overflow-y-auto" style="-webkit-overflow-scrolling: touch;">
+                {% if ricambi %}
+                    <div class="space-y-3">
+                        {% for r in ricambi %}
+                        <div class="bg-white border rounded-lg p-3 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <h5 class="font-bold text-gray-800 text-sm">{{ r.nome }}</h5>
+                                <form method="POST" action="/ricambio/{{ r.id }}/elimina" >
+                                    <input type="hidden" name="ref" value="veicolo">
+                                    <input type="hidden" name="veicolo_id" value="{{ veicolo.id }}">
+                                    <button type="submit" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+                                </form>
+                            </div>
+
+                            <div class="flex justify-between items-center text-sm mb-3">
+                                <span class="text-gray-600 font-semibold">Prezzo:</span>
+                                <span class="text-gray-900 font-bold">€ {{ "%.2f"|format(r.prezzo) }}</span>
+                            </div>
+
+                            <div class="flex space-x-2 border-t pt-2 mt-2">
+                                <form method="POST" action="/ricambio/{{ r.id }}/toggle/ordinato" class="flex-1">
+                                    <input type="hidden" name="ref" value="veicolo">
+                                    <input type="hidden" name="veicolo_id" value="{{ veicolo.id }}">
+                                    <button type="submit" class="w-full py-1 px-2 rounded text-xs font-bold transition-colors {% if r.ordinato %}bg-blue-100 text-blue-700 border border-blue-300{% else %}bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200{% endif %}">
+                                        <i class="fas fa-shopping-cart"></i> {% if r.ordinato %}Ordinato{% else %}Da Ordinare{% endif %}
+                                    </button>
+                                </form>
+                                <form method="POST" action="/ricambio/{{ r.id }}/toggle/in_carrozzeria" class="flex-1">
+                                    <input type="hidden" name="ref" value="veicolo">
+                                    <input type="hidden" name="veicolo_id" value="{{ veicolo.id }}">
+                                    <button type="submit" class="w-full py-1 px-2 rounded text-xs font-bold transition-colors {% if r.in_carrozzeria %}bg-green-100 text-green-700 border border-green-300{% else %}bg-gray-100 text-gray-500 border border-gray-300 hover:bg-gray-200{% endif %}">
+                                        <i class="fas fa-box"></i> {% if r.in_carrozzeria %}Arrivato{% else %}In Attesa{% endif %}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-box-open text-3xl mb-2 text-gray-300"></i>
+                        <p class="text-sm">Nessun ricambio associato a questo veicolo.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="p-4 bg-white border-t mt-auto">
+                <form method="POST" action="/ricambio/nuovo">
+                    <input type="hidden" name="ref" value="veicolo">
+                    <input type="hidden" name="veicolo_id" value="{{ veicolo.id }}">
+
+                    <div class="mb-2">
+                        <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="nome" type="text" placeholder="Nome ricambio da aggiungere...">
+                    </div>
+                    <div class="flex space-x-2 mb-3">
+                        <div class="w-1/2 relative">
+                            <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-sm">€</span>
+                            </div>
+                            <input class="appearance-none border rounded w-full py-2 pl-6 pr-2 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm text-right" name="prezzo" type="number" step="0.01" placeholder="0.00">
+                        </div>
+                        <button type="submit" class="w-1/2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold py-2 px-4 rounded transition-colors text-sm border border-blue-300">
+                            <i class="fas fa-plus"></i> Aggiungi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Chiudi il dropdown di stampa cliccando fuori
+    document.addEventListener('click', function(event) {
+        var dropdown = document.getElementById('dropdownStampa');
+        var btn = dropdown.previousElementSibling;
+        if (!btn.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Funzione per aggiungere righe di ripristino
+    function addRipristinoRow() {
+        const container = document.getElementById('ripristino_container');
+        const row = document.createElement('div');
+        row.className = 'flex space-x-2 items-center mt-2';
+        row.innerHTML = `
+            <input type="text" name="rip_desc[]" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Descrizione...">
+            <select name="rip_gravita[]" class="appearance-none border rounded w-24 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white">
+                <option value="SF">SF (Sfumatura)</option>
+                <option value="L">L (Lieve)</option>
+                <option value="M">M (Medio)</option>
+                <option value="G">G (Grave)</option>
+            </select>
+            <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(row);
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+{% endblock %}
+
+<style>
+    /* Safe area per iPad/iPhone in basso */
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 2rem); }
+</style>
+<style>
+    /* Abilita scorrimento fluido su iOS */
+    * { -webkit-overflow-scrolling: touch; }
+</style>

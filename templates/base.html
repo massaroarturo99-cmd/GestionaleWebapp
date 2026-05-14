@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Officina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Regole per la stampa per nascondere la sidebar e stampare solo il contenuto */
+        @media print {
+            .no-print { display: none !important; }
+            .print-full-width { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans flex min-h-screen" x-data="{ sidebarOpen: false }">
+
+    <!-- Overlay per dispositivi mobili o quando la sidebar è aperta -->
+    <div x-show="sidebarOpen" x-transition.opacity
+         class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 "
+         @click="sidebarOpen = false" style="display: none;"></div>
+
+    <!-- Sidebar fissa/a scomparsa (Nascosta in fase di stampa) -->
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+           class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col no-print h-full transition-transform duration-300 ease-in-out flex-shrink-0">
+
+        <div class="p-6 flex justify-between items-center border-b border-gray-700 bg-gray-800">
+            <div class="flex flex-col items-start w-full">
+                <div class="flex justify-between w-full">
+                    <img src="/static/images/Logo_Bianco.jpeg" alt="Massaro Group Logo" class="h-12 bg-white rounded p-1 mb-2">
+                    <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white ml-auto">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <h1 class="text-xl font-bold tracking-wider text-white">Massaro Group</h1>
+            </div>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            <a href="/" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-home w-5 text-center"></i>
+                <span>Home</span>
+            </a>
+
+            <div class="pt-4 pb-2">
+                <p class="text-xs uppercase text-gray-500 font-semibold pl-3">Gestione</p>
+            </div>
+
+            <a href="/veicoli" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-car w-5 text-center"></i>
+                <span>Veicoli</span>
+            </a>
+            <a href="/ricambi" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-box-open w-5 text-center"></i>
+                <span>Ricambi</span>
+            </a>
+            <a href="/clienti" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-users w-5 text-center"></i>
+                <span>Rubrica Clienti</span>
+            </a>
+            <a href="/fornitori" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-truck w-5 text-center"></i>
+                <span>Fornitori e Bolle</span>
+            </a>
+        </nav>
+        <div class="p-4 border-t border-gray-700 text-sm text-gray-500 text-center">
+            &copy; 2024 Massaro Group
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-h-screen w-full print-full-width">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center no-print relative z-10">
+            <div class="flex items-center space-x-4">
+                <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                    <i class="fas fa-wrench text-xl"></i>
+                </button>
+                <h2 class="text-xl font-semibold text-gray-800 hidden sm:block">
+                    {% block header_title %}Dashboard{% endblock %}
+                </h2>
+            </div>
+
+            <div class="flex items-center space-x-5">
+                <span class="hidden md:inline text-gray-500 text-sm"><i class="fas fa-calendar-alt"></i> <span id="current-date"></span></span>
+
+                <!-- Notifiche Dropdown -->
+                <div class="relative" x-data="{ openNotif: false }">
+                    <button @click="openNotif = !openNotif" class="relative text-gray-500 hover:text-blue-600 focus:outline-none transition-colors mt-1">
+                        <i class="fas fa-bell text-xl"></i>
+                        {% if total_notifications and total_notifications > 0 %}
+                        <span class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">{{ total_notifications }}</span>
+                        {% endif %}
+                    </button>
+
+                    <div x-show="openNotif" @click.away="openNotif = false" x-transition class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-50 border" style="display: none;">
+                        <div class="py-2">
+                            <div class="px-4 py-2 border-b bg-gray-50 text-sm font-bold text-gray-700">Notifiche Consegne</div>
+
+                            {% if total_notifications == 0 %}
+                                <div class="px-4 py-3 text-sm text-gray-500">Nessuna consegna imminente o in ritardo.</div>
+                            {% else %}
+                                <div class="max-h-64 overflow-y-auto">
+                                    {% if notifications.ritardo|length > 0 %}
+                                        <div class="px-4 py-1 bg-red-50 text-red-800 text-xs font-bold uppercase">In Ritardo</div>
+                                        {% for n in notifications.ritardo %}
+                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-exclamation-circle text-red-500 mr-2"></i>{{ n }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if notifications.oggi|length > 0 %}
+                                        <div class="px-4 py-1 bg-yellow-50 text-yellow-800 text-xs font-bold uppercase">Consegna Oggi</div>
+                                        {% for n in notifications.oggi %}
+                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-calendar-day text-yellow-500 mr-2"></i>{{ n }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if notifications.domani|length > 0 %}
+                                        <div class="px-4 py-1 bg-blue-50 text-blue-800 text-xs font-bold uppercase">Consegna Domani</div>
+                                        {% for n in notifications.domani %}
+                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-clock text-blue-500 mr-2"></i>{{ n }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 border-l pl-4 border-gray-300">
+                    <a href="/" class="text-gray-500 hover:text-blue-600 transition-colors" title="Home">
+                        <i class="fas fa-home text-xl"></i>
+                    </a>
+                    <a href="/veicolo/nuovo" class="text-blue-500 hover:text-blue-700 transition-colors" title="Nuovo Veicolo">
+                        <i class="fas fa-plus-circle text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 p-6">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    </script>
+</body>
+</html>
+<style>
+    /* Abilita scorrimento fluido su iOS */
+    body, main { -webkit-overflow-scrolling: touch; }
+</style>
