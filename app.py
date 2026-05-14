@@ -48,6 +48,8 @@ def init_db():
                 lavorazioni_sostituzione TEXT,
                 lavorazioni_ripristino TEXT,
                 totale REAL DEFAULT 0.0,
+                manodopera REAL DEFAULT 0.0,
+                costo_ricambi REAL DEFAULT 0.0,
                 acconto REAL DEFAULT 0.0,
                 riconsegnata BOOLEAN DEFAULT 0,
                 drive_folder_id TEXT,
@@ -136,6 +138,15 @@ def migrate_db():
     except sqlite3.OperationalError:
         db.execute("ALTER TABLE veicoli ADD COLUMN controparte_nome TEXT")
         db.execute("ALTER TABLE veicoli ADD COLUMN controparte_telefono TEXT")
+        db.commit()
+
+    try:
+        db.execute("SELECT manodopera FROM veicoli LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE veicoli ADD COLUMN manodopera REAL DEFAULT 0.0")
+        db.execute("ALTER TABLE veicoli ADD COLUMN costo_ricambi REAL DEFAULT 0.0")
+        # Mantieni il totale esistente assegnandolo alla manodopera per non perdere i dati pregressi
+        db.execute("UPDATE veicoli SET manodopera = totale WHERE totale > 0")
         db.commit()
 
     try:
@@ -628,7 +639,9 @@ def veicolo_detail(id):
         data_consegna_prevista = request.form.get('data_consegna_prevista')
         lavorazioni_sostituzione = request.form.get('lavorazioni_sostituzione')
         lavorazioni_ripristino = request.form.get('lavorazioni_ripristino')
-        totale = float(request.form.get('totale') or 0.0)
+        manodopera = float(request.form.get('manodopera') or 0.0)
+        costo_ricambi = float(request.form.get('costo_ricambi') or 0.0)
+        totale = manodopera + costo_ricambi
         acconto = float(request.form.get('acconto') or 0.0)
         riconsegnata = 1 if request.form.get('riconsegnata') else 0
 
@@ -649,10 +662,10 @@ def veicolo_detail(id):
             UPDATE veicoli SET
                 marca=?, modello=?, anno=?, cliente_id=?, stato=?, data_arrivo=?,
                 data_consegna_prevista=?, lavorazioni_sostituzione=?, lavorazioni_ripristino=?,
-                totale=?, acconto=?, riconsegnata=?, controparte_nome=?, controparte_telefono=?
+                manodopera=?, costo_ricambi=?, totale=?, acconto=?, riconsegnata=?, controparte_nome=?, controparte_telefono=?
             WHERE id=?
         ''', (marca, modello, anno, cliente_id, stato, data_arrivo, data_consegna_prevista,
-              lavorazioni_sostituzione, lavorazioni_ripristino, totale, acconto, riconsegnata, controparte_nome, controparte_telefono, id))
+              lavorazioni_sostituzione, lavorazioni_ripristino, manodopera, costo_ricambi, totale, acconto, riconsegnata, controparte_nome, controparte_telefono, id))
 
         # Save Lavorazioni Ripristino Righe (SF/L/M/G)
         db.execute('DELETE FROM lavorazioni_ripristino_righe WHERE veicolo_id = ?', (id,))
