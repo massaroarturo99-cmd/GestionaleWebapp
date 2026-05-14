@@ -1255,6 +1255,13 @@ def bolla_nuova():
     data = request.form.get('data') or datetime.now().strftime('%Y-%m-%d')
     note = request.form.get('note')
 
+    # Se il fornitore appartiene alla categoria 'Varie' e non c'è un codice reale
+    fornitore = db.execute('SELECT categoria FROM fornitori WHERE id = ?', (fornitore_id,)).fetchone()
+    if fornitore and fornitore['categoria'] == 'Varie':
+        if not codice or codice == 'SPESA':
+            timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+            codice = f"SPESA-{timestamp}"
+
     cursor = db.execute('INSERT INTO bolle (fornitore_id, codice, data, note) VALUES (?, ?, ?, ?)', (fornitore_id, codice, data, note))
     db.commit()
     return redirect(url_for('bolla_detail', id=cursor.lastrowid))
