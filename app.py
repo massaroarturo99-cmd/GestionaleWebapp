@@ -1293,7 +1293,7 @@ def bolla_detail(id):
         db.commit()
         return redirect(url_for('bolla_detail', id=id))
 
-    bolla = db.execute('SELECT b.*, f.nome as fornitore_nome FROM bolle b JOIN fornitori f ON b.fornitore_id = f.id WHERE b.id = ?', (id,)).fetchone()
+    bolla = db.execute('SELECT b.*, f.nome as fornitore_nome, f.categoria as fornitore_categoria FROM bolle b JOIN fornitori f ON b.fornitore_id = f.id WHERE b.id = ?', (id,)).fetchone()
     if not bolla:
         return redirect(url_for('fornitori_list'))
 
