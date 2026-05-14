@@ -117,8 +117,25 @@ def init_db():
                 prodotto_id INTEGER,
                 quantita INTEGER DEFAULT 1,
                 prezzo_applicato REAL DEFAULT 0.0,
+                nome_ricambio TEXT,
+                codice_ricambio TEXT,
+                marchio TEXT,
+                modello_auto TEXT,
+                anno TEXT,
                 FOREIGN KEY (bolla_id) REFERENCES bolle (id),
                 FOREIGN KEY (prodotto_id) REFERENCES fornitore_prodotti (id)
+            )
+        ''')
+
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS catalogo_ricambi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                codice_ricambio TEXT,
+                nome_ricambio TEXT NOT NULL,
+                marchio TEXT,
+                modello_auto TEXT,
+                anno TEXT,
+                ultimo_prezzo REAL DEFAULT 0.0
             )
         ''')
         db.commit()
@@ -169,6 +186,28 @@ def migrate_db():
         db.execute("ALTER TABLE fornitori ADD COLUMN categoria TEXT DEFAULT 'Materiale'")
         db.commit()
 
+    try:
+        db.execute("SELECT codice_ricambio FROM bolla_prodotti LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN nome_ricambio TEXT")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN codice_ricambio TEXT")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN marchio TEXT")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN modello_auto TEXT")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN anno TEXT")
+
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS catalogo_ricambi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                codice_ricambio TEXT,
+                nome_ricambio TEXT NOT NULL,
+                marchio TEXT,
+                modello_auto TEXT,
+                anno TEXT,
+                ultimo_prezzo REAL DEFAULT 0.0
+            )
+        ''')
+        db.commit()
+
     # Try to verify if fornitori tables exist (migration for older dbs)
     try:
         db.execute("SELECT id FROM fornitori LIMIT 1")
@@ -208,8 +247,24 @@ def migrate_db():
                 prodotto_id INTEGER,
                 quantita INTEGER DEFAULT 1,
                 prezzo_applicato REAL DEFAULT 0.0,
+                nome_ricambio TEXT,
+                codice_ricambio TEXT,
+                marchio TEXT,
+                modello_auto TEXT,
+                anno TEXT,
                 FOREIGN KEY (bolla_id) REFERENCES bolle (id),
                 FOREIGN KEY (prodotto_id) REFERENCES fornitore_prodotti (id)
+            )
+        ''')
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS catalogo_ricambi (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                codice_ricambio TEXT,
+                nome_ricambio TEXT NOT NULL,
+                marchio TEXT,
+                modello_auto TEXT,
+                anno TEXT,
+                ultimo_prezzo REAL DEFAULT 0.0
             )
         ''')
         db.commit()
@@ -1021,25 +1076,25 @@ def fornitore_detail(id):
 
     # Analisi Consumi per Prodotto
     consumi_query = """
-        SELECT fp.id as prodotto_id, fp.nome as prodotto, strftime('%Y-%m', b.data) as mese, SUM(bp.quantita) as totale_quantita
+        SELECT COALESCE(fp.id, bp.codice_ricambio, bp.nome_ricambio) as prodotto_id, COALESCE(fp.nome, bp.nome_ricambio) as prodotto, strftime('%Y-%m', b.data) as mese, SUM(bp.quantita) as totale_quantita
         FROM bolla_prodotti bp
         JOIN bolle b ON bp.bolla_id = b.id
-        JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
+        LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
         WHERE b.fornitore_id = ? AND b.data IS NOT NULL
-        GROUP BY fp.id, fp.nome, mese
-        ORDER BY fp.nome, mese DESC
+        GROUP BY prodotto_id, prodotto, mese
+        ORDER BY prodotto, mese DESC
     """
     consumi_raw = db.execute(consumi_query, (id,)).fetchall()
 
     # Consumi ultimi 7 giorni
     sette_giorni_fa = (now - timedelta(days=7)).strftime('%Y-%m-%d')
     consumi_7g_query = """
-        SELECT fp.id as prodotto_id, SUM(bp.quantita) as quantita_7g
+        SELECT COALESCE(fp.id, bp.codice_ricambio, bp.nome_ricambio) as prodotto_id, SUM(bp.quantita) as quantita_7g
         FROM bolla_prodotti bp
         JOIN bolle b ON bp.bolla_id = b.id
-        JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
+        LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
         WHERE b.fornitore_id = ? AND b.data >= ?
-        GROUP BY fp.id
+        GROUP BY prodotto_id
     """
     consumi_7g_raw = db.execute(consumi_7g_query, (id, sette_giorni_fa)).fetchall()
     consumi_7g_dict = {row['prodotto_id']: row['quantita_7g'] for row in consumi_7g_raw}
@@ -1122,7 +1177,7 @@ def fornitore_export(id):
 
     query = """
         SELECT b.data as 'Data Bolla', b.codice as 'Codice Bolla',
-               fp.nome as 'Prodotto', bp.quantita as 'Quantità',
+               COALESCE(fp.nome, bp.nome_ricambio) as 'Prodotto', bp.quantita as 'Quantità',
                bp.prezzo_applicato as 'Prezzo Unitario (€)',
                (bp.quantita * bp.prezzo_applicato) as 'Totale Riga (€)',
                b.note as 'Note Bolla'
@@ -1298,7 +1353,7 @@ def bolla_detail(id):
         return redirect(url_for('fornitori_list'))
 
     righe = db.execute('''
-        SELECT bp.*, fp.nome
+        SELECT bp.*, COALESCE(fp.nome, bp.nome_ricambio) as nome
         FROM bolla_prodotti bp
         LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
         WHERE bp.bolla_id = ?
@@ -1311,32 +1366,66 @@ def bolla_detail(id):
 @app.route('/bolla/<int:id>/prodotto/nuovo', methods=['POST'])
 def bolla_prodotto_nuovo(id):
     db = get_db()
-    prodotto_id = request.form.get('prodotto_id')
+    bolla = db.execute('SELECT b.*, f.categoria as fornitore_categoria FROM bolle b JOIN fornitori f ON b.fornitore_id = f.id WHERE b.id = ?', (id,)).fetchone()
+    if not bolla:
+        return redirect(url_for('fornitori_list'))
+
     quantita = int(request.form.get('quantita') or 1)
-
-    # Allow custom product entry on the fly
     custom_nome = request.form.get('custom_nome')
-    custom_prezzo = float(request.form.get('custom_prezzo') or 0.0)
 
-    if not prodotto_id and custom_nome:
-        # Create a new product in the fornitore's listino first
-        bolla = db.execute('SELECT fornitore_id FROM bolle WHERE id = ?', (id,)).fetchone()
-        if bolla:
+    if bolla['fornitore_categoria'] == 'Ricambi':
+        # Logica per Ricambi
+        codice_ricambio = request.form.get('codice_ricambio')
+        marchio = request.form.get('marchio')
+        modello_auto = request.form.get('modello_auto')
+        anno = request.form.get('anno')
+        custom_prezzo = float(request.form.get('custom_prezzo') or 0.0)
+
+        # 1. Salva la riga nella bolla
+        db.execute('''
+            INSERT INTO bolla_prodotti
+            (bolla_id, quantita, prezzo_applicato, nome_ricambio, codice_ricambio, marchio, modello_auto, anno)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (id, quantita, custom_prezzo, custom_nome, codice_ricambio, marchio, modello_auto, anno))
+
+        # 2. Upsert nel catalogo dinamico
+        if codice_ricambio:
+            existing = db.execute('SELECT id FROM catalogo_ricambi WHERE codice_ricambio = ?', (codice_ricambio,)).fetchone()
+        else:
+            existing = db.execute('SELECT id FROM catalogo_ricambi WHERE nome_ricambio = ? AND marchio = ? AND modello_auto = ?',
+                                  (custom_nome, marchio or '', modello_auto or '')).fetchone()
+
+        if existing:
+            db.execute('UPDATE catalogo_ricambi SET ultimo_prezzo = ? WHERE id = ?', (custom_prezzo, existing['id']))
+        else:
+            db.execute('''
+                INSERT INTO catalogo_ricambi (codice_ricambio, nome_ricambio, marchio, modello_auto, anno, ultimo_prezzo)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (codice_ricambio, custom_nome, marchio, modello_auto, anno, custom_prezzo))
+
+        db.commit()
+    else:
+        # Logica standard per Materiale e Varie
+        prodotto_id = request.form.get('prodotto_id')
+        custom_prezzo = float(request.form.get('custom_prezzo') or 0.0)
+
+        if not prodotto_id and custom_nome:
+            # Create a new product in the fornitore's listino first
             cursor = db.execute('INSERT INTO fornitore_prodotti (fornitore_id, nome, prezzo_listino) VALUES (?, ?, ?)', (bolla['fornitore_id'], custom_nome, custom_prezzo))
             prodotto_id = cursor.lastrowid
             prezzo_applicato = custom_prezzo
-    else:
-        # Fetch standard price if not overridden
-        prezzo_applicato = request.form.get('prezzo_applicato')
-        if not prezzo_applicato:
-            prod = db.execute('SELECT prezzo_listino FROM fornitore_prodotti WHERE id = ?', (prodotto_id,)).fetchone()
-            prezzo_applicato = prod['prezzo_listino'] if prod else 0.0
         else:
-            prezzo_applicato = float(prezzo_applicato)
+            # Fetch standard price if not overridden
+            prezzo_applicato = request.form.get('prezzo_applicato')
+            if not prezzo_applicato:
+                prod = db.execute('SELECT prezzo_listino FROM fornitore_prodotti WHERE id = ?', (prodotto_id,)).fetchone()
+                prezzo_applicato = prod['prezzo_listino'] if prod else 0.0
+            else:
+                prezzo_applicato = float(prezzo_applicato)
 
-    if prodotto_id:
-        db.execute('INSERT INTO bolla_prodotti (bolla_id, prodotto_id, quantita, prezzo_applicato) VALUES (?, ?, ?, ?)', (id, prodotto_id, quantita, prezzo_applicato))
-        db.commit()
+        if prodotto_id:
+            db.execute('INSERT INTO bolla_prodotti (bolla_id, prodotto_id, quantita, prezzo_applicato) VALUES (?, ?, ?, ?)', (id, prodotto_id, quantita, prezzo_applicato))
+            db.commit()
 
     return redirect(url_for('bolla_detail', id=id))
 
@@ -1381,7 +1470,7 @@ def bolla_riga_modifica(id):
         if riga:
             return redirect(url_for("bolla_detail", id=riga["bolla_id"]))
         return redirect(url_for("fornitori_list"))
-    riga = db.execute("SELECT bp.*, fp.nome FROM bolla_prodotti bp LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id WHERE bp.id = ?", (id,)).fetchone()
+    riga = db.execute("SELECT bp.*, COALESCE(fp.nome, bp.nome_ricambio) as nome FROM bolla_prodotti bp LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id WHERE bp.id = ?", (id,)).fetchone()
     if not riga:
         return redirect(url_for("fornitori_list"))
     return render_template("bolla_riga_edit.html", riga=riga)

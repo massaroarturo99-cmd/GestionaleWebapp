@@ -208,9 +208,9 @@ def update_fornitori_txt(service, root_folder_id, db_path='officina.db'):
         for b in bolle:
             totale_bolla = 0.0
             prodotti = conn.execute('''
-                SELECT bp.quantita, bp.prezzo_applicato, fp.nome
+                SELECT bp.quantita, bp.prezzo_applicato, COALESCE(fp.nome, bp.nome_ricambio) as nome
                 FROM bolla_prodotti bp
-                JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
+                LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
                 WHERE bp.bolla_id = ?
             ''', (b['id'],)).fetchall()
 
