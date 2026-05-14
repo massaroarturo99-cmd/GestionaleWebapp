@@ -10,8 +10,17 @@
     openExportModal: false
 }" class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
     <div>
-        <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-truck text-blue-500"></i> {{ fornitore.nome }}</h2>
-        <p class="text-gray-500 text-sm">Tel: {{ fornitore.telefono or '-' }} | Note: {{ fornitore.note or 'Nessuna nota' }}</p>
+        <div class="flex items-center gap-3">
+            <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-truck text-blue-500"></i> {{ fornitore.nome }}</h2>
+            <span class="px-3 py-1 text-sm font-semibold rounded-full
+                {% if fornitore.categoria == 'Materiale' %}bg-blue-100 text-blue-800
+                {% elif fornitore.categoria == 'Ricambi' %}bg-green-100 text-green-800
+                {% elif fornitore.categoria == 'Varie' %}bg-purple-100 text-purple-800
+                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                {{ fornitore.categoria or 'Materiale' }}
+            </span>
+        </div>
+        <p class="text-gray-500 text-sm mt-1">Tel: {{ fornitore.telefono or '-' }} | Note: {{ fornitore.note or 'Nessuna nota' }}</p>
     </div>
     <div class="flex space-x-2">
         <button @click="openModificaFornitore = true" class="bg-blue-100 hover:bg-blue-200 text-blue-800 px-4 py-2 rounded shadow font-bold text-sm transition-colors flex items-center space-x-2">
@@ -87,6 +96,14 @@
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Telefono</label>
                     <input name="telefono" type="text" value="{{ fornitore.telefono or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Categoria Fornitore</label>
+                    <select name="categoria" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="Materiale" {% if fornitore.categoria == 'Materiale' %}selected{% endif %}>Materiale</option>
+                        <option value="Ricambi" {% if fornitore.categoria == 'Ricambi' %}selected{% endif %}>Ricambi</option>
+                        <option value="Varie" {% if fornitore.categoria == 'Varie' %}selected{% endif %}>Varie</option>
+                    </select>
                 </div>
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Note</label>

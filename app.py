@@ -30,8 +30,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
                 telefono TEXT,
-                note TEXT,
-                categoria TEXT DEFAULT 'Materiale'
+                note TEXT
             )
         ''')
 
@@ -945,7 +944,8 @@ def fornitore_modifica(id):
     nome = (request.form.get('nome') or '').upper()
     telefono = request.form.get('telefono')
     note = request.form.get('note')
-    db.execute('UPDATE fornitori SET nome = ?, telefono = ?, note = ? WHERE id = ?', (nome, telefono, note, id))
+    categoria = request.form.get('categoria') or 'Materiale'
+    db.execute('UPDATE fornitori SET nome = ?, telefono = ?, note = ?, categoria = ? WHERE id = ?', (nome, telefono, note, categoria, id))
     db.commit()
     return redirect(url_for('fornitore_detail', id=id))
 
