@@ -8,3 +8,6 @@
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 399-225-005
+127.0.0.1 - - [14/May/2026 17:23:46] "GET /fornitore/1 HTTP/1.1" 200 -
+127.0.0.1 - - [14/May/2026 17:24:51] "GET /fornitore/1 HTTP/1.1" 200 -
+127.0.0.1 - - [14/May/2026 17:24:51] "[33mGET /static/images/Logo_Bianco.jpeg HTTP/1.1[0m" 404 -

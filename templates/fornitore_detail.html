@@ -126,14 +126,16 @@
     <!-- Tab Navigation -->
     <div class="flex border-b border-gray-300 mb-6 space-x-4 overflow-x-auto" style="-webkit-overflow-scrolling: touch;">
         <a href="#bolle" @click="tab = 'bolle'" :class="{ 'border-blue-500 text-blue-600': tab === 'bolle', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'bolle' }" class="py-2 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors whitespace-nowrap">
-            <i class="fas fa-file-invoice"></i> <span>Storico Bolle</span>
+            <i class="fas fa-file-invoice"></i> <span>{% if fornitore.categoria == 'Varie' %}Storico Spese{% else %}Storico Bolle{% endif %}</span>
         </a>
+        {% if fornitore.categoria != 'Varie' %}
         <a href="#consumi" @click="tab = 'consumi'" :class="{ 'border-blue-500 text-blue-600': tab === 'consumi', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'consumi' }" class="py-2 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors whitespace-nowrap">
             <i class="fas fa-chart-pie"></i> <span>Consumi per Prodotto</span>
         </a>
         <a href="#prodotti" @click="tab = 'prodotti'" :class="{ 'border-blue-500 text-blue-600': tab === 'prodotti', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': tab !== 'prodotti' }" class="py-2 px-4 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors whitespace-nowrap">
             <i class="fas fa-list-ol"></i> <span>Listino Prodotti Base</span>
         </a>
+        {% endif %}
     </div>
 
     <!-- Bolle View -->
@@ -141,15 +143,19 @@
         <!-- Colonna Sinistra: Form + Statistiche -->
         <div class="lg:col-span-1 space-y-6">
             <div class="bg-white rounded-xl shadow-md p-6">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-plus-circle text-blue-500"></i> Nuova Bolla</h3>
+                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-plus-circle text-blue-500"></i> {% if fornitore.categoria == 'Varie' %}Nuova Spesa{% else %}Nuova Bolla{% endif %}</h3>
                 <form method="POST" action="/bolla/nuova">
                     <input type="hidden" name="fornitore_id" value="{{ fornitore.id }}">
+                    {% if fornitore.categoria != 'Varie' %}
                     <div class="mb-4">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Codice/Numero Bolla *</label>
                         <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="codice" type="text" placeholder="es. FT-1234">
                     </div>
+                    {% else %}
+                    <input type="hidden" name="codice" value="SPESA">
+                    {% endif %}
                     <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Data Bolla</label>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">{% if fornitore.categoria == 'Varie' %}Data Spesa{% else %}Data Bolla{% endif %}</label>
                         <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="data" type="date" id="data_bolla">
                     </div>
                     <div class="mb-6">
@@ -157,7 +163,7 @@
                         <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="note" type="text" placeholder="es. Consegna parziale">
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors">
-                        Crea Bolla
+                        {% if fornitore.categoria == 'Varie' %}Registra Spesa{% else %}Crea Bolla{% endif %}
                     </button>
                 </form>
             </div>
@@ -167,10 +173,11 @@
                 <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-chart-line text-blue-500"></i> Statistiche</h3>
 
                 <div class="mb-4">
-                    <p class="text-sm text-gray-500 font-bold uppercase">Totale Assoluto Storico</p>
+                    <p class="text-sm text-gray-500 font-bold uppercase">Totale Generale</p>
                     <p class="text-3xl font-black text-gray-900">€ {{ "%.2f"|format(stats.totale_assoluto) }}</p>
                 </div>
 
+                {% if fornitore.categoria != 'Varie' %}
                 <div class="mb-4">
                     <p class="text-sm text-gray-500 font-bold uppercase">Spesa Mese Corrente</p>
                     <div class="flex items-center space-x-3">
@@ -203,6 +210,7 @@
                     </div>
                 </div>
                 {% endif %}
+                {% endif %}
             </div>
         </div>
 
@@ -212,14 +220,14 @@
                 <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
                     <div class="relative w-full max-w-sm">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500"><i class="fas fa-search"></i></span>
-                        <input x-model="searchBolla" type="text" placeholder="Cerca Codice, Data o Note..." class="w-full pl-10 pr-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <input x-model="searchBolla" type="text" placeholder="Cerca Data o Note..." class="w-full pl-10 pr-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     </div>
                 </div>
                 <table class="min-w-full leading-normal">
                     <thead class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         <tr>
                             <th class="px-5 py-3">Data</th>
-                            <th class="px-5 py-3">Codice Bolla</th>
+                            <th class="px-5 py-3">{% if fornitore.categoria == 'Varie' %}Note/Rif{% else %}Codice Bolla{% endif %}</th>
                             <th class="px-5 py-3 text-right">Totale Euro</th>
                             <th class="px-5 py-3 text-right">Azioni</th>
                         </tr>
@@ -244,11 +252,16 @@
                                 {% endif %}
 
                                 <td class="px-5 py-4 whitespace-nowrap text-sm font-semibold">{{ b.data }}</td>
-                                <td class="px-5 py-4 font-bold text-gray-900">{{ b.codice }}<br><span class="text-xs text-gray-500 font-normal">{{ b.note or '' }}</span></td>
+                                <td class="px-5 py-4 font-bold text-gray-900">
+                                    {% if fornitore.categoria != 'Varie' %}
+                                    {{ b.codice }}<br>
+                                    {% endif %}
+                                    <span class="text-xs text-gray-500 font-normal">{{ b.note or '' }}</span>
+                                </td>
                                 <td class="px-5 py-4 text-right whitespace-nowrap font-bold text-lg text-green-700">€ {{ "%.2f"|format(b.totale) }}</td>
                                 <td class="px-5 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <a href="/bolla/{{ b.id }}" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-2 rounded-lg transition-colors inline-block mr-2" title="Modifica e Aggiungi Prodotti">
-                                        <i class="fas fa-edit"></i> Apri Bolla
+                                        <i class="fas fa-edit"></i> {% if fornitore.categoria == 'Varie' %}Dettagli Spesa{% else %}Apri Bolla{% endif %}
                                     </a>
                                     <form method="POST" action="/bolla/{{ b.id }}/elimina" class="inline-block" >
                                         <button type="submit" class="text-red-500 hover:text-red-800 p-2 bg-red-100 rounded transition-colors"><i class="fas fa-trash"></i></button>
@@ -264,6 +277,7 @@
         </div>
     </div>
 
+    {% if fornitore.categoria != 'Varie' %}
     <!-- Consumi View -->
     <div x-show="tab === 'consumi'" class="bg-white rounded-xl shadow-md overflow-hidden" style="display: none;">
         <div class="p-6 border-b">
@@ -375,6 +389,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
 </div>
 <script>
