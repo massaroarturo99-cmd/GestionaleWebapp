@@ -46,15 +46,9 @@
         <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-green-500">
             <h3 class="text-sm font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-cogs"></i> Aggiungi Ricambio alla Bolla</h3>
             <form method="POST" action="/bolla/{{ bolla.id }}/prodotto/nuovo">
-                <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                        <label class="block text-gray-700 text-xs font-bold mb-1">Codice Ricambio</label>
-                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm font-mono uppercase" name="codice_ricambio" type="text" placeholder="Es. BR123">
-                    </div>
-                    <div>
-                        <label class="block text-gray-700 text-xs font-bold mb-1">Data *</label>
-                        <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="data_ricambio" type="date" value="{{ bolla.data }}">
-                    </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Codice Ricambio</label>
+                    <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm font-mono uppercase" name="codice_ricambio" type="text" placeholder="Es. BR123">
                 </div>
                 <div class="mb-3">
                     <label class="block text-gray-700 text-xs font-bold mb-1">Nome Ricambio *</label>
@@ -63,17 +57,17 @@
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Marchio</label>
-                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="marchio" type="text" placeholder="Es. Bosch">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="marchio" id="input_marchio" type="text" placeholder="Es. Bosch">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
-                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="modello_auto" type="text" placeholder="Es. Fiat Panda">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="modello_auto" id="input_modello_auto" type="text" placeholder="Es. Fiat Panda">
                     </div>
                 </div>
                 <div class="grid grid-cols-4 gap-3 mb-4">
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Anno</label>
-                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="anno" type="text" placeholder="Es. 2018">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="anno" id="input_anno" type="text" placeholder="Es. 2018">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Q.tà *</label>
@@ -90,10 +84,10 @@
                 </div>
                 <div class="mb-4">
                     <label class="block text-gray-700 text-xs font-bold mb-1">Veicolo Destinatario (Targa) - Opzionale</label>
-                    <select name="veicolo_targa" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm">
+                    <select name="veicolo_targa" id="select_veicolo_targa" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm">
                         <option value="">-- Nessun veicolo associato --</option>
                         {% for v in veicoli_attivi %}
-                        <option value="{{ v.targa }}">{{ v.targa }} - {{ v.marca }} {{ v.modello }}</option>
+                        <option value="{{ v.targa }}" data-marchio="{{ v.marca or '' }}" data-modello="{{ v.modello or '' }}" data-anno="{{ v.anno or '' }}">{{ v.targa }} - {{ v.marca }} {{ v.modello }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -221,4 +215,29 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const selectVeicolo = document.getElementById("select_veicolo_targa");
+    const inputMarchio = document.getElementById("input_marchio");
+    const inputModello = document.getElementById("input_modello_auto");
+    const inputAnno = document.getElementById("input_anno");
+
+    if (selectVeicolo) {
+        selectVeicolo.addEventListener("change", function() {
+            const selectedOption = selectVeicolo.options[selectVeicolo.selectedIndex];
+
+            if (selectedOption && selectedOption.value !== "") {
+                inputMarchio.value = selectedOption.getAttribute("data-marchio") || "";
+                inputModello.value = selectedOption.getAttribute("data-modello") || "";
+                inputAnno.value = selectedOption.getAttribute("data-anno") || "";
+            } else {
+                inputMarchio.value = "";
+                inputModello.value = "";
+                inputAnno.value = "";
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

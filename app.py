@@ -1418,7 +1418,7 @@ def bolla_detail(id):
     ''', (id,)).fetchall()
 
     prodotti_fornitore = db.execute('SELECT * FROM fornitore_prodotti WHERE fornitore_id = ? ORDER BY nome', (bolla['fornitore_id'],)).fetchall()
-    veicoli_attivi = db.execute("SELECT id, targa, marca, modello FROM veicoli WHERE riconsegnata = 0 ORDER BY targa ASC").fetchall()
+    veicoli_attivi = db.execute("SELECT id, targa, marca, modello, anno FROM veicoli WHERE riconsegnata = 0 ORDER BY targa ASC").fetchall()
 
     return render_template('bolla_detail.html', bolla=bolla, righe=righe, prodotti_fornitore=prodotti_fornitore, veicoli_attivi=veicoli_attivi)
 
