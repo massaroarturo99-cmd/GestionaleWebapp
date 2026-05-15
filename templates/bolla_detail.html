@@ -70,7 +70,7 @@
                         <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="modello_auto" type="text" placeholder="Es. Fiat Panda">
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-3 mb-3">
+                <div class="grid grid-cols-4 gap-3 mb-4">
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Anno</label>
                         <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm" name="anno" type="text" placeholder="Es. 2018">
@@ -82,6 +82,10 @@
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Prezzo (€) *</label>
                         <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm text-right" name="custom_prezzo" type="number" step="0.01" value="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">% SC.</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm text-right" name="sconto_perc" type="number" step="0.01" value="0">
                     </div>
                 </div>
                 <div class="mb-4">
@@ -174,6 +178,7 @@
                             <th class="px-5 py-3">Veicolo</th>
                             {% endif %}
                             <th class="px-5 py-3 text-right">Cad. (€)</th>
+                            <th class="px-5 py-3 text-right">SC. %</th>
                             <th class="px-5 py-3 text-right">Totale Riga (€)</th>
                             <th class="px-5 py-3 text-center">Azioni</th>
                         </tr>
@@ -181,7 +186,7 @@
                     <tbody>
                         {% set total_bolla = namespace(value=0) %}
                         {% for r in righe %}
-                        {% set tot_riga = r.quantita * r.prezzo_applicato %}
+                        {% set tot_riga = r.quantita * r.prezzo_applicato * (1 - (r.sconto_perc or 0) / 100.0) %}
                         {% set total_bolla.value = total_bolla.value + tot_riga %}
                         <tr class="hover:bg-blue-50 transition-colors border-b border-gray-200">
                             <td class="px-5 py-3 whitespace-nowrap text-center font-bold text-gray-800 bg-gray-50 w-12">{{ r.quantita }}</td>
@@ -193,6 +198,7 @@
                             <td class="px-5 py-3 text-gray-600 text-sm">{{ r.marchio or '-' }} {{ r.modello_auto or '-' }} {{ r.anno or '' }}</td>
                             {% endif %}
                             <td class="px-5 py-3 text-right text-gray-600 text-sm">€ {{ "%.2f"|format(r.prezzo_applicato) }}</td>
+                            <td class="px-5 py-3 text-right text-red-500 font-bold text-sm">{% if r.sconto_perc %}-{{ "%.2f"|format(r.sconto_perc) }}%{% else %}-{% endif %}</td>
                             <td class="px-5 py-3 text-right font-bold text-green-700">€ {{ "%.2f"|format(tot_riga) }}</td>
                             <td class="px-5 py-3 whitespace-nowrap text-center text-sm font-medium w-16">
                                 <a href="/bolla/riga/{{ r.id }}/modifica" class="text-blue-500 hover:text-blue-700 p-1 mr-2"><i class="fas fa-edit"></i></a>

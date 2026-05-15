@@ -14,9 +14,13 @@
             <label class="block text-gray-700 text-sm font-bold mb-2">Quantità *</label>
             <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold text-center" name="quantita" type="number" min="1" value="{{ riga.quantita }}">
         </div>
-        <div class="mb-6">
+        <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2">Prezzo Applicato (€) *</label>
             <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="prezzo_applicato" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.prezzo_applicato) }}">
+        </div>
+        <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2">% Sconto</label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="sconto_perc" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.sconto_perc or 0.0) }}">
         </div>
         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2">
             <i class="fas fa-save"></i> <span>Salva Modifiche</span>

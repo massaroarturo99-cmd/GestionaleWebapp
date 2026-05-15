@@ -117,6 +117,7 @@ def init_db():
                 prodotto_id INTEGER,
                 quantita INTEGER DEFAULT 1,
                 prezzo_applicato REAL DEFAULT 0.0,
+                sconto_perc REAL DEFAULT 0.0,
                 nome_ricambio TEXT,
                 codice_ricambio TEXT,
                 marchio TEXT,
@@ -205,6 +206,11 @@ def migrate_db():
         db.execute("ALTER TABLE bolla_prodotti ADD COLUMN stato_ordine TEXT DEFAULT 'ORDINATO'")
         db.execute("ALTER TABLE bolla_prodotti ADD COLUMN stato_consegna TEXT DEFAULT 'IN OFFICINA'")
 
+    try:
+        db.execute("SELECT sconto_perc FROM bolla_prodotti LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN sconto_perc REAL DEFAULT 0.0")
+
         db.execute('''
             CREATE TABLE IF NOT EXISTS catalogo_ricambi (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -257,6 +263,7 @@ def migrate_db():
                 prodotto_id INTEGER,
                 quantita INTEGER DEFAULT 1,
                 prezzo_applicato REAL DEFAULT 0.0,
+                sconto_perc REAL DEFAULT 0.0,
                 nome_ricambio TEXT,
                 codice_ricambio TEXT,
                 marchio TEXT,
@@ -1046,7 +1053,7 @@ def fornitore_detail(id):
     bolle_with_totals = []
     totale_assoluto = 0.0
     for b in bolle:
-        tot = db.execute('SELECT SUM(quantita * prezzo_applicato) as tot FROM bolla_prodotti WHERE bolla_id = ?', (b['id'],)).fetchone()['tot'] or 0.0
+        tot = db.execute('SELECT SUM(quantita * prezzo_applicato * (1 - COALESCE(sconto_perc, 0) / 100.0)) as tot FROM bolla_prodotti WHERE bolla_id = ?', (b['id'],)).fetchone()['tot'] or 0.0
         b_dict = dict(b)
         b_dict['totale'] = tot
         totale_assoluto += tot
@@ -1230,7 +1237,7 @@ def fornitore_export(id):
         SELECT b.data as 'Data Bolla', b.codice as 'Codice Bolla',
                COALESCE(fp.nome, bp.nome_ricambio) as 'Prodotto', bp.quantita as 'Quantità',
                bp.prezzo_applicato as 'Prezzo Unitario (€)',
-               (bp.quantita * bp.prezzo_applicato) as 'Totale Riga (€)',
+               (bp.quantita * bp.prezzo_applicato * (1 - COALESCE(bp.sconto_perc, 0) / 100.0)) as 'Totale Riga (€)',
                b.note as 'Note Bolla'
         FROM bolle b
         LEFT JOIN bolla_prodotti bp ON b.id = bp.bolla_id
@@ -1424,6 +1431,7 @@ def bolla_prodotto_nuovo(id):
 
     quantita = int(request.form.get('quantita') or 1)
     custom_nome = request.form.get('custom_nome')
+    sconto_perc = float(request.form.get('sconto_perc') or 0.0)
 
     if bolla['fornitore_categoria'] == 'Ricambi':
         # Logica per Ricambi
@@ -1440,9 +1448,9 @@ def bolla_prodotto_nuovo(id):
         # 1. Salva la riga nella bolla
         db.execute('''
             INSERT INTO bolla_prodotti
-            (bolla_id, quantita, prezzo_applicato, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (id, quantita, custom_prezzo, custom_nome, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna))
+            (bolla_id, quantita, prezzo_applicato, sconto_perc, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (id, quantita, custom_prezzo, sconto_perc, custom_nome, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna))
 
         # 2. Upsert nel catalogo dinamico
         if codice_ricambio:
@@ -1480,7 +1488,7 @@ def bolla_prodotto_nuovo(id):
                 prezzo_applicato = float(prezzo_applicato)
 
         if prodotto_id:
-            db.execute('INSERT INTO bolla_prodotti (bolla_id, prodotto_id, quantita, prezzo_applicato) VALUES (?, ?, ?, ?)', (id, prodotto_id, quantita, prezzo_applicato))
+            db.execute('INSERT INTO bolla_prodotti (bolla_id, prodotto_id, quantita, prezzo_applicato, sconto_perc) VALUES (?, ?, ?, ?, ?)', (id, prodotto_id, quantita, prezzo_applicato, sconto_perc))
             db.commit()
 
     return redirect(url_for('bolla_detail', id=id))
@@ -1520,7 +1528,8 @@ def bolla_riga_modifica(id):
     if request.method == "POST":
         quantita = request.form.get("quantita") or 1
         prezzo_applicato = request.form.get("prezzo_applicato") or 0.0
-        db.execute("UPDATE bolla_prodotti SET quantita = ?, prezzo_applicato = ? WHERE id = ?", (quantita, prezzo_applicato, id))
+        sconto_perc = request.form.get("sconto_perc") or 0.0
+        db.execute("UPDATE bolla_prodotti SET quantita = ?, prezzo_applicato = ?, sconto_perc = ? WHERE id = ?", (quantita, prezzo_applicato, sconto_perc, id))
         db.commit()
         riga = db.execute("SELECT bolla_id FROM bolla_prodotti WHERE id = ?", (id,)).fetchone()
         if riga:

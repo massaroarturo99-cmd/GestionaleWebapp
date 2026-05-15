@@ -208,7 +208,7 @@ def update_fornitori_txt(service, root_folder_id, db_path='officina.db'):
         for b in bolle:
             totale_bolla = 0.0
             prodotti = conn.execute('''
-                SELECT bp.quantita, bp.prezzo_applicato, COALESCE(fp.nome, bp.nome_ricambio) as nome
+                SELECT bp.quantita, bp.prezzo_applicato, bp.sconto_perc, COALESCE(fp.nome, bp.nome_ricambio) as nome
                 FROM bolla_prodotti bp
                 LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
                 WHERE bp.bolla_id = ?
@@ -216,9 +216,9 @@ def update_fornitori_txt(service, root_folder_id, db_path='officina.db'):
 
             lines.append(f"  > BOLLA: {b['codice']} | DATA: {b['data']}".upper())
             for p in prodotti:
-                tot_riga = p['quantita'] * p['prezzo_applicato']
+                tot_riga = p['quantita'] * p['prezzo_applicato'] * (1 - (p['sconto_perc'] or 0) / 100.0)
                 totale_bolla += tot_riga
-                lines.append(f"      - {p['quantita']}x {p['nome'].upper()} (cad. €{p['prezzo_applicato']:.2f}) = €{tot_riga:.2f}")
+                lines.append(f"      - {p['quantita']}x {p['nome'].upper()} (cad. €{p['prezzo_applicato']:.2f}" + (f" - SC. {p['sconto_perc']}%" if p['sconto_perc'] else "") + f") = €{tot_riga:.2f}")
             lines.append(f"    TOTALE BOLLA: €{totale_bolla:.2f}\n")
 
         lines.append("-" * 40 + "\n")
