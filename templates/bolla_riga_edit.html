@@ -10,21 +10,68 @@
     </div>
 
     <form method="POST" action="/bolla/riga/{{ riga.id }}/modifica">
-        <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2">Quantità *</label>
-            <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold text-center" name="quantita" type="number" min="1" value="{{ riga.quantita }}">
-        </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2">Prezzo Applicato (€) *</label>
-            <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="prezzo_applicato" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.prezzo_applicato) }}">
-        </div>
-        <div class="mb-6">
-            <label class="block text-gray-700 text-sm font-bold mb-2">% Sconto</label>
-            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="sconto_perc" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.sconto_perc or 0.0) }}">
-        </div>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2">
-            <i class="fas fa-save"></i> <span>Salva Modifiche</span>
-        </button>
+        {% if riga.fornitore_categoria == 'Ricambi' %}
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Codice Ricambio</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 font-mono uppercase" name="codice_ricambio" type="text" value="{{ riga.codice_ricambio or '' }}">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nome Ricambio *</label>
+                    <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="nome_ricambio" type="text" value="{{ riga.nome_ricambio or riga.nome or '' }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Marchio</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="marchio" type="text" value="{{ riga.marchio or '' }}">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Modello</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="modello_auto" type="text" value="{{ riga.modello_auto or '' }}">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Anno</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="anno" type="text" value="{{ riga.anno or '' }}">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Quantità *</label>
+                    <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 font-bold text-center" name="quantita" type="number" min="1" value="{{ riga.quantita }}">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Prezzo Applicato (€) *</label>
+                    <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-right" name="prezzo_applicato" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.prezzo_applicato) }}">
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">% Sconto</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-right" name="sconto_perc" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.sconto_perc or 0.0) }}">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2">
+                <i class="fas fa-save"></i> <span>Salva Modifiche Ricambio</span>
+            </button>
+        {% else %}
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Quantità *</label>
+                <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold text-center" name="quantita" type="number" min="1" value="{{ riga.quantita }}">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Prezzo Applicato (€) *</label>
+                <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="prezzo_applicato" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.prezzo_applicato) }}">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2">% Sconto</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-right" name="sconto_perc" type="number" step="0.01" inputmode="decimal" value="{{ "%.2f"|format(riga.sconto_perc or 0.0) }}">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors flex items-center justify-center space-x-2">
+                <i class="fas fa-save"></i> <span>Salva Modifiche</span>
+            </button>
+        {% endif %}
     </form>
 </div>
 {% endblock %}

@@ -1529,13 +1529,36 @@ def bolla_riga_modifica(id):
         quantita = request.form.get("quantita") or 1
         prezzo_applicato = request.form.get("prezzo_applicato") or 0.0
         sconto_perc = request.form.get("sconto_perc") or 0.0
-        db.execute("UPDATE bolla_prodotti SET quantita = ?, prezzo_applicato = ?, sconto_perc = ? WHERE id = ?", (quantita, prezzo_applicato, sconto_perc, id))
+
+        # Check if the request contains fields specific to 'Ricambi'
+        nome_ricambio = request.form.get("nome_ricambio")
+        if nome_ricambio is not None: # Means it's a Ricambi form
+            codice_ricambio = request.form.get("codice_ricambio")
+            marchio = request.form.get("marchio")
+            modello_auto = request.form.get("modello_auto")
+            anno = request.form.get("anno")
+            db.execute("""
+                UPDATE bolla_prodotti
+                SET quantita = ?, prezzo_applicato = ?, sconto_perc = ?,
+                    nome_ricambio = ?, codice_ricambio = ?, marchio = ?, modello_auto = ?, anno = ?
+                WHERE id = ?
+            """, (quantita, prezzo_applicato, sconto_perc, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, id))
+        else:
+            db.execute("UPDATE bolla_prodotti SET quantita = ?, prezzo_applicato = ?, sconto_perc = ? WHERE id = ?", (quantita, prezzo_applicato, sconto_perc, id))
+
         db.commit()
         riga = db.execute("SELECT bolla_id FROM bolla_prodotti WHERE id = ?", (id,)).fetchone()
         if riga:
             return redirect(url_for("bolla_detail", id=riga["bolla_id"]))
         return redirect(url_for("fornitori_list"))
-    riga = db.execute("SELECT bp.*, COALESCE(fp.nome, bp.nome_ricambio) as nome FROM bolla_prodotti bp LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id WHERE bp.id = ?", (id,)).fetchone()
+    riga = db.execute("""
+        SELECT bp.*, COALESCE(fp.nome, bp.nome_ricambio) as nome, f.categoria as fornitore_categoria
+        FROM bolla_prodotti bp
+        LEFT JOIN fornitore_prodotti fp ON bp.prodotto_id = fp.id
+        JOIN bolle b ON bp.bolla_id = b.id
+        JOIN fornitori f ON b.fornitore_id = f.id
+        WHERE bp.id = ?
+    """, (id,)).fetchone()
     if not riga:
         return redirect(url_for("fornitori_list"))
     return render_template("bolla_riga_edit.html", riga=riga)
