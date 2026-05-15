@@ -362,15 +362,15 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
                     <label class="block text-gray-700 text-xs font-bold mb-1">Marchio</label>
-                    <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Es. Bosch">
+                    <input type="text" id="filtro_marchio" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Es. Bosch">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
-                    <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Es. Panda">
+                    <input type="text" id="filtro_modello" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Es. Panda">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-xs font-bold mb-1">Nome Ricambio</label>
-                    <input type="text" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Cerca...">
+                    <input type="text" id="filtro_nome" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Cerca...">
                 </div>
             </div>
 
@@ -386,10 +386,10 @@
                             <th class="px-5 py-3 border-b border-gray-200 text-right">Ultimo Prezzo (€)</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="catalogo_risultati_body">
                         <tr>
                             <td colspan="5" class="px-5 py-8 text-center text-gray-500">
-                                Nessun risultato. Usa i filtri per cercare nel catalogo dinamico.
+                                Inizia a digitare nei filtri per cercare nel catalogo dinamico.
                             </td>
                         </tr>
                     </tbody>
@@ -525,5 +525,60 @@ function consumiChartComponent() {
         }
     }
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    const filtroMarchio = document.getElementById('filtro_marchio');
+    const filtroModello = document.getElementById('filtro_modello');
+    const filtroNome = document.getElementById('filtro_nome');
+    const tbody = document.getElementById('catalogo_risultati_body');
+
+    if (!filtroMarchio || !filtroModello || !filtroNome || !tbody) return;
+
+    function fetchCatalogo() {
+        const url = new URL('/api/ricerca_catalogo', window.location.origin);
+        if (filtroMarchio.value) url.searchParams.append('marchio', filtroMarchio.value);
+        if (filtroModello.value) url.searchParams.append('modello', filtroModello.value);
+        if (filtroNome.value) url.searchParams.append('nome_ricambio', filtroNome.value);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                tbody.innerHTML = ''; // Svuota la tabella
+
+                if (data.risultati && data.risultati.length > 0) {
+                    data.risultati.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-blue-50 transition-colors border-b border-gray-200";
+
+                        tr.innerHTML = `
+                            <td class="px-5 py-4 font-bold text-gray-900">${item.nome_ricambio} <br><span class="text-xs font-mono text-gray-500">${item.codice_ricambio}</span></td>
+                            <td class="px-5 py-4 text-gray-700">${item.marchio}</td>
+                            <td class="px-5 py-4 text-gray-700">${item.modello_auto}</td>
+                            <td class="px-5 py-4 text-gray-700 text-sm">${item.anno}</td>
+                            <td class="px-5 py-4 text-right whitespace-nowrap text-green-700 font-bold">€ ${parseFloat(item.ultimo_prezzo).toFixed(2)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="px-5 py-8 text-center text-gray-500">
+                                Nessun ricambio trovato con questi filtri.
+                            </td>
+                        </tr>
+                    `;
+                }
+            })
+            .catch(error => console.error('Errore nel fetch del catalogo:', error));
+    }
+
+    // Aggiungi gli event listener (potremmo usare un debounce, ma per ora lo facciamo live)
+    filtroMarchio.addEventListener('input', fetchCatalogo);
+    filtroModello.addEventListener('input', fetchCatalogo);
+    filtroNome.addEventListener('input', fetchCatalogo);
+
+    // Esegui una prima chiamata per popolare la tabella se ci sono dati
+    fetchCatalogo();
+});
 </script>
 {% endblock %}

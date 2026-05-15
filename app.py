@@ -1125,6 +1125,44 @@ def fornitore_detail(id):
                            stats=stats,
                            consumi=consumi_per_prodotto)
 
+@app.route('/api/ricerca_catalogo', methods=['GET'])
+def api_ricerca_catalogo():
+    db = get_db()
+    marchio = request.args.get('marchio', '')
+    modello = request.args.get('modello', '')
+    nome_ricambio = request.args.get('nome_ricambio', '')
+
+    query = "SELECT * FROM catalogo_ricambi WHERE 1=1"
+    params = []
+
+    if marchio:
+        query += " AND marchio LIKE ?"
+        params.append(f"%{marchio}%")
+    if modello:
+        query += " AND modello_auto LIKE ?"
+        params.append(f"%{modello}%")
+    if nome_ricambio:
+        query += " AND nome_ricambio LIKE ?"
+        params.append(f"%{nome_ricambio}%")
+
+    query += " ORDER BY nome_ricambio ASC, marchio ASC"
+
+    rows = db.execute(query, params).fetchall()
+
+    risultati = []
+    for r in rows:
+        risultati.append({
+            'id': r['id'],
+            'codice_ricambio': r['codice_ricambio'] or '',
+            'nome_ricambio': r['nome_ricambio'],
+            'marchio': r['marchio'] or '',
+            'modello_auto': r['modello_auto'] or '',
+            'anno': r['anno'] or '',
+            'ultimo_prezzo': r['ultimo_prezzo'] or 0.0
+        })
+
+    return jsonify({'risultati': risultati})
+
 @app.route('/api/fornitore/<int:fornitore_id>/prodotto/<int:prodotto_id>/consumi')
 def api_consumi_prodotto(fornitore_id, prodotto_id):
     db = get_db()
