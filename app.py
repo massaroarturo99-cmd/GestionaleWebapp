@@ -122,6 +122,9 @@ def init_db():
                 marchio TEXT,
                 modello_auto TEXT,
                 anno TEXT,
+                veicolo_targa TEXT,
+                stato_ordine TEXT DEFAULT 'ORDINATO',
+                stato_consegna TEXT DEFAULT 'IN OFFICINA',
                 FOREIGN KEY (bolla_id) REFERENCES bolle (id),
                 FOREIGN KEY (prodotto_id) REFERENCES fornitore_prodotti (id)
             )
@@ -195,6 +198,13 @@ def migrate_db():
         db.execute("ALTER TABLE bolla_prodotti ADD COLUMN modello_auto TEXT")
         db.execute("ALTER TABLE bolla_prodotti ADD COLUMN anno TEXT")
 
+    try:
+        db.execute("SELECT veicolo_targa FROM bolla_prodotti LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN veicolo_targa TEXT")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN stato_ordine TEXT DEFAULT 'ORDINATO'")
+        db.execute("ALTER TABLE bolla_prodotti ADD COLUMN stato_consegna TEXT DEFAULT 'IN OFFICINA'")
+
         db.execute('''
             CREATE TABLE IF NOT EXISTS catalogo_ricambi (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -252,6 +262,9 @@ def migrate_db():
                 marchio TEXT,
                 modello_auto TEXT,
                 anno TEXT,
+                veicolo_targa TEXT,
+                stato_ordine TEXT DEFAULT 'ORDINATO',
+                stato_consegna TEXT DEFAULT 'IN OFFICINA',
                 FOREIGN KEY (bolla_id) REFERENCES bolle (id),
                 FOREIGN KEY (prodotto_id) REFERENCES fornitore_prodotti (id)
             )
@@ -1398,8 +1411,9 @@ def bolla_detail(id):
     ''', (id,)).fetchall()
 
     prodotti_fornitore = db.execute('SELECT * FROM fornitore_prodotti WHERE fornitore_id = ? ORDER BY nome', (bolla['fornitore_id'],)).fetchall()
+    veicoli_attivi = db.execute("SELECT id, targa, marca, modello FROM veicoli WHERE riconsegnata = 0 ORDER BY targa ASC").fetchall()
 
-    return render_template('bolla_detail.html', bolla=bolla, righe=righe, prodotti_fornitore=prodotti_fornitore)
+    return render_template('bolla_detail.html', bolla=bolla, righe=righe, prodotti_fornitore=prodotti_fornitore, veicoli_attivi=veicoli_attivi)
 
 @app.route('/bolla/<int:id>/prodotto/nuovo', methods=['POST'])
 def bolla_prodotto_nuovo(id):
@@ -1419,12 +1433,16 @@ def bolla_prodotto_nuovo(id):
         anno = request.form.get('anno')
         custom_prezzo = float(request.form.get('custom_prezzo') or 0.0)
 
+        veicolo_targa = request.form.get('veicolo_targa') or None
+        stato_ordine = 'ORDINATO'
+        stato_consegna = 'IN OFFICINA'
+
         # 1. Salva la riga nella bolla
         db.execute('''
             INSERT INTO bolla_prodotti
-            (bolla_id, quantita, prezzo_applicato, nome_ricambio, codice_ricambio, marchio, modello_auto, anno)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (id, quantita, custom_prezzo, custom_nome, codice_ricambio, marchio, modello_auto, anno))
+            (bolla_id, quantita, prezzo_applicato, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (id, quantita, custom_prezzo, custom_nome, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna))
 
         # 2. Upsert nel catalogo dinamico
         if codice_ricambio:
