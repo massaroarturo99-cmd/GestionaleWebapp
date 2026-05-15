@@ -48,8 +48,8 @@
             <form method="POST" action="/bolla/{{ bolla.id }}/prodotto/nuovo">
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                        <label class="block text-gray-700 text-xs font-bold mb-1">Codice Ricambio *</label>
-                        <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm font-mono uppercase" name="codice_ricambio" type="text" placeholder="Es. BR123">
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Codice Ricambio</label>
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500 text-sm font-mono uppercase" name="codice_ricambio" type="text" placeholder="Es. BR123">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Data *</label>
@@ -158,7 +158,7 @@
     <div class="lg:col-span-2">
         <div class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full">
             <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-list-ul text-gray-500"></i> Righe Prodotti Inseriti</h3>
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-list-ul text-gray-500"></i> {% if bolla.fornitore_categoria == 'Ricambi' %}Righe Articoli Inseriti{% else %}Righe Prodotti Inseriti{% endif %}</h3>
             </div>
 
             <div class="overflow-x-auto flex-1 p-0">
@@ -169,7 +169,7 @@
                             {% if bolla.fornitore_categoria == 'Ricambi' %}
                             <th class="px-5 py-3">Codice Ric.</th>
                             {% endif %}
-                            <th class="px-5 py-3">Prodotto</th>
+                            <th class="px-5 py-3">{% if bolla.fornitore_categoria == 'Ricambi' %}Articolo{% else %}Prodotto{% endif %}</th>
                             {% if bolla.fornitore_categoria == 'Ricambi' %}
                             <th class="px-5 py-3">Veicolo</th>
                             {% endif %}
