@@ -1467,6 +1467,20 @@ def bolla_prodotto_nuovo(id):
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (codice_ricambio, custom_nome, marchio, modello_auto, anno, custom_prezzo))
 
+        # 3. Copia carbone nella scheda veicolo
+        if veicolo_targa:
+            veicolo = db.execute('SELECT id FROM veicoli WHERE targa = ?', (veicolo_targa,)).fetchone()
+            if veicolo:
+                veicolo_id = veicolo['id']
+                prezzo_scontato = custom_prezzo * (1 - (sconto_perc or 0) / 100.0)
+                totale_ricambio = prezzo_scontato * quantita
+
+                # Inseriamo il ricambio specificando che è già ordinato e in carrozzeria (in officina)
+                db.execute('''
+                    INSERT INTO ricambi (veicolo_id, nome, prezzo, ordinato, in_carrozzeria)
+                    VALUES (?, ?, ?, 1, 1)
+                ''', (veicolo_id, custom_nome, totale_ricambio))
+
         db.commit()
     else:
         # Logica standard per Materiale e Varie
