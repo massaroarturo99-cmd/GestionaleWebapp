@@ -155,6 +155,12 @@ def migrate_db():
         db.commit()
 
     try:
+        db.execute("SELECT bolla_prodotto_id FROM ricambi LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE ricambi ADD COLUMN bolla_prodotto_id INTEGER")
+        db.commit()
+
+    try:
         db.execute("SELECT controparte_nome FROM veicoli LIMIT 1")
     except sqlite3.OperationalError:
         db.execute("ALTER TABLE veicoli ADD COLUMN controparte_nome TEXT")
@@ -1446,11 +1452,13 @@ def bolla_prodotto_nuovo(id):
         stato_consegna = 'IN OFFICINA'
 
         # 1. Salva la riga nella bolla
-        db.execute('''
+        cursor = db.execute('''
             INSERT INTO bolla_prodotti
             (bolla_id, quantita, prezzo_applicato, sconto_perc, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (id, quantita, custom_prezzo, sconto_perc, custom_nome, codice_ricambio, marchio, modello_auto, anno, veicolo_targa, stato_ordine, stato_consegna))
+
+        new_bolla_prodotto_id = cursor.lastrowid
 
         # 2. Upsert nel catalogo dinamico
         if codice_ricambio:
@@ -1477,9 +1485,9 @@ def bolla_prodotto_nuovo(id):
 
                 # Inseriamo il ricambio specificando che è già ordinato e in carrozzeria (in officina)
                 db.execute('''
-                    INSERT INTO ricambi (veicolo_id, nome, prezzo, ordinato, in_carrozzeria)
-                    VALUES (?, ?, ?, 1, 1)
-                ''', (veicolo_id, custom_nome, totale_ricambio))
+                    INSERT INTO ricambi (veicolo_id, nome, prezzo, ordinato, in_carrozzeria, bolla_prodotto_id)
+                    VALUES (?, ?, ?, 1, 1, ?)
+                ''', (veicolo_id, custom_nome, totale_ricambio, new_bolla_prodotto_id))
 
         db.commit()
     else:
@@ -1551,12 +1559,39 @@ def bolla_riga_modifica(id):
             marchio = request.form.get("marchio")
             modello_auto = request.form.get("modello_auto")
             anno = request.form.get("anno")
+            veicolo_targa_new = request.form.get("veicolo_targa") or None
+
+            # Recupera la riga precedente per confrontare la targa
+            riga_prec = db.execute("SELECT veicolo_targa FROM bolla_prodotti WHERE id = ?", (id,)).fetchone()
+            veicolo_targa_old = riga_prec['veicolo_targa'] if riga_prec else None
+
             db.execute("""
                 UPDATE bolla_prodotti
                 SET quantita = ?, prezzo_applicato = ?, sconto_perc = ?,
-                    nome_ricambio = ?, codice_ricambio = ?, marchio = ?, modello_auto = ?, anno = ?
+                    nome_ricambio = ?, codice_ricambio = ?, marchio = ?, modello_auto = ?, anno = ?, veicolo_targa = ?
                 WHERE id = ?
-            """, (quantita, prezzo_applicato, sconto_perc, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, id))
+            """, (quantita, prezzo_applicato, sconto_perc, nome_ricambio, codice_ricambio, marchio, modello_auto, anno, veicolo_targa_new, id))
+
+            # Gestione Copia Carbone
+            if veicolo_targa_new != veicolo_targa_old:
+                # 1. Se c'era una targa precedente, rimuovi la copia carbone dal veicolo vecchio
+                if veicolo_targa_old:
+                    veicolo_old = db.execute('SELECT id FROM veicoli WHERE targa = ?', (veicolo_targa_old,)).fetchone()
+                    if veicolo_old:
+                        db.execute('DELETE FROM ricambi WHERE veicolo_id = ? AND bolla_prodotto_id = ?', (veicolo_old['id'], id))
+
+                # 2. Se c'è una nuova targa, inserisci la copia carbone nel nuovo veicolo
+                if veicolo_targa_new:
+                    veicolo_new = db.execute('SELECT id FROM veicoli WHERE targa = ?', (veicolo_targa_new,)).fetchone()
+                    if veicolo_new:
+                        prezzo_scontato = float(prezzo_applicato) * (1 - float(sconto_perc) / 100.0)
+                        totale_ricambio = prezzo_scontato * float(quantita)
+
+                        db.execute('''
+                            INSERT INTO ricambi (veicolo_id, nome, prezzo, ordinato, in_carrozzeria, bolla_prodotto_id)
+                            VALUES (?, ?, ?, 1, 1, ?)
+                        ''', (veicolo_new['id'], nome_ricambio, totale_ricambio, id))
+
         else:
             db.execute("UPDATE bolla_prodotti SET quantita = ?, prezzo_applicato = ?, sconto_perc = ? WHERE id = ?", (quantita, prezzo_applicato, sconto_perc, id))
 
@@ -1575,13 +1610,19 @@ def bolla_riga_modifica(id):
     """, (id,)).fetchone()
     if not riga:
         return redirect(url_for("fornitori_list"))
-    return render_template("bolla_riga_edit.html", riga=riga)
+
+    veicoli = []
+    if riga['fornitore_categoria'] == 'Ricambi':
+        veicoli = db.execute('SELECT id, targa, marca, modello, anno FROM veicoli ORDER BY targa').fetchall()
+
+    return render_template("bolla_riga_edit.html", riga=riga, veicoli=veicoli)
 
 @app.route('/bolla/riga/<int:id>/elimina', methods=['POST'])
 def bolla_riga_elimina(id):
     db = get_db()
     riga = db.execute('SELECT bolla_id FROM bolla_prodotti WHERE id = ?', (id,)).fetchone()
     if riga:
+        db.execute('DELETE FROM ricambi WHERE bolla_prodotto_id = ?', (id,))
         db.execute('DELETE FROM bolla_prodotti WHERE id = ?', (id,))
         db.commit()
         return redirect(url_for('bolla_detail', id=riga['bolla_id']))

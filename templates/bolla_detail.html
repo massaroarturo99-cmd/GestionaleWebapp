@@ -189,7 +189,13 @@
                             {% endif %}
                             <td class="px-5 py-3 font-semibold text-gray-900">{{ r.nome }}</td>
                             {% if bolla.fornitore_categoria == 'Ricambi' %}
-                            <td class="px-5 py-3 text-gray-600 text-sm">{{ r.marchio or '-' }} {{ r.modello_auto or '-' }} {{ r.anno or '' }}</td>
+                            <td class="px-5 py-3 text-center">
+                                {% if r.veicolo_targa %}
+                                <a href="/bolla/riga/{{ r.id }}/modifica" class="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded hover:bg-blue-200 transition-colors" title="Modifica Associazione">{{ r.veicolo_targa }}</a>
+                                {% else %}
+                                <a href="/bolla/riga/{{ r.id }}/modifica" class="text-xs text-blue-500 hover:text-blue-700 hover:underline"><i class="fas fa-link"></i> Associa Veicolo</a>
+                                {% endif %}
+                            </td>
                             {% endif %}
                             <td class="px-5 py-3 text-right text-gray-600 text-sm">€ {{ "%.2f"|format(r.prezzo_applicato) }}</td>
                             <td class="px-5 py-3 text-right text-red-500 font-bold text-sm">{% if r.sconto_perc %}-{{ "%.2f"|format(r.sconto_perc) }}%{% else %}-{% endif %}</td>

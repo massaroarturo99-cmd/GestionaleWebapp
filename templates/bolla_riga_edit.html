@@ -11,6 +11,23 @@
 
     <form method="POST" action="/bolla/riga/{{ riga.id }}/modifica">
         {% if riga.fornitore_categoria == 'Ricambi' %}
+            <div class="mb-4 bg-blue-50 p-3 rounded border border-blue-200">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Veicolo Destinatario (Targa)</label>
+                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white" name="veicolo_targa" id="select_veicolo_targa">
+                    <option value="">-- Nessun Veicolo --</option>
+                    {% for v in veicoli %}
+                    <option value="{{ v.targa }}"
+                        data-marchio="{{ v.marca }}"
+                        data-modello="{{ v.modello }}"
+                        data-anno="{{ v.anno }}"
+                        {% if riga.veicolo_targa == v.targa %}selected{% endif %}>
+                        {{ v.targa }} - {{ v.marca }} {{ v.modello }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-blue-600 mt-1"><i class="fas fa-info-circle"></i> Modificando la targa, la Copia Carbone verrà aggiornata sulla scheda del nuovo veicolo.</p>
+            </div>
+
             <div class="grid grid-cols-2 gap-4 mb-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Codice Ricambio</label>
@@ -25,15 +42,15 @@
             <div class="grid grid-cols-3 gap-4 mb-4">
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Marchio</label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="marchio" type="text" value="{{ riga.marchio or '' }}">
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="marchio" id="input_marchio" type="text" value="{{ riga.marchio or '' }}">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Modello</label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="modello_auto" type="text" value="{{ riga.modello_auto or '' }}">
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="modello_auto" id="input_modello_auto" type="text" value="{{ riga.modello_auto or '' }}">
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Anno</label>
-                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="anno" type="text" value="{{ riga.anno or '' }}">
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-green-500" name="anno" id="input_anno" type="text" value="{{ riga.anno or '' }}">
                 </div>
             </div>
 
@@ -74,4 +91,28 @@
         {% endif %}
     </form>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const selectVeicolo = document.getElementById("select_veicolo_targa");
+    const inputMarchio = document.getElementById("input_marchio");
+    const inputModello = document.getElementById("input_modello_auto");
+    const inputAnno = document.getElementById("input_anno");
+
+    if (selectVeicolo) {
+        selectVeicolo.addEventListener("change", function() {
+            const selectedOption = selectVeicolo.options[selectVeicolo.selectedIndex];
+
+            if (selectedOption && selectedOption.value !== "") {
+                inputMarchio.value = selectedOption.getAttribute("data-marchio") || "";
+                inputModello.value = selectedOption.getAttribute("data-modello") || "";
+                inputAnno.value = selectedOption.getAttribute("data-anno") || "";
+            } else {
+                inputMarchio.value = "";
+                inputModello.value = "";
+                inputAnno.value = "";
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
