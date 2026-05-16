@@ -1151,6 +1151,42 @@ def fornitore_detail(id):
                            stats=stats,
                            consumi=consumi_per_prodotto)
 
+@app.route('/catalogo/<int:id>/modifica', methods=['POST'])
+def catalogo_modifica(id):
+    db = get_db()
+    fornitore_id = request.form.get('fornitore_id')
+
+    codice_ricambio = request.form.get('codice_ricambio')
+    nome_ricambio = request.form.get('nome_ricambio')
+    marchio = request.form.get('marchio')
+    modello_auto = request.form.get('modello_auto')
+    anno = request.form.get('anno')
+    ultimo_prezzo = request.form.get('ultimo_prezzo') or 0.0
+
+    db.execute('''
+        UPDATE catalogo_ricambi
+        SET codice_ricambio = ?, nome_ricambio = ?, marchio = ?, modello_auto = ?, anno = ?, ultimo_prezzo = ?
+        WHERE id = ?
+    ''', (codice_ricambio, nome_ricambio, marchio, modello_auto, anno, ultimo_prezzo, id))
+    db.commit()
+
+    if fornitore_id:
+        return redirect(url_for('fornitore_detail', id=fornitore_id) + '#catalogo')
+    return redirect(url_for('fornitori_list'))
+
+
+@app.route('/catalogo/<int:id>/elimina', methods=['POST'])
+def catalogo_elimina(id):
+    db = get_db()
+    fornitore_id = request.form.get('fornitore_id')
+    db.execute('DELETE FROM catalogo_ricambi WHERE id = ?', (id,))
+    db.commit()
+
+    if fornitore_id:
+        return redirect(url_for('fornitore_detail', id=fornitore_id) + '#catalogo')
+    return redirect(url_for('fornitori_list'))
+
+
 @app.route('/api/ricerca_catalogo', methods=['GET'])
 def api_ricerca_catalogo():
     db = get_db()
