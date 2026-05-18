@@ -707,10 +707,33 @@ def veicolo_nuovo():
             ''', (targa, marca, modello, cliente_id, stato, data_arrivo, controparte_nome, controparte_telefono))
             db.commit()
 
-            # Sync to drive
-            sync_db_to_drive(cursor.lastrowid)
+            nuovo_veicolo_id = cursor.lastrowid
 
-            return redirect(url_for('veicolo_detail', id=cursor.lastrowid, from_new=1))
+            # Sync to drive creates the actual vehicle folder and updates texts
+            sync_db_to_drive(nuovo_veicolo_id)
+
+            # Trasloco automatico: sposta tutte le foto da Temp_Officina alla nuova cartella
+            service = drive_service.get_drive_service()
+            if service:
+                try:
+                    root_id = drive_service.get_or_create_root_folder(service)
+
+                    # Usa lo stesso format utilizzato in sync_db_to_drive per calcolare il nome cartella
+                    # We can fetch the new vehicle info just inserted to get the correct name
+                    v = db.execute('SELECT * FROM veicoli WHERE id = ?', (nuovo_veicolo_id,)).fetchone()
+                    folder_name = format_drive_folder_name(v)
+
+                    target_folder_id = drive_service.get_or_create_vehicle_folder(service, root_id, folder_name)
+                    temp_folder_id = drive_service.get_or_create_temp_folder(service)
+
+                    photos = drive_service.list_photos(service, temp_folder_id)
+                    for photo in photos:
+                        drive_service.move_file(service, photo['id'], target_folder_id)
+
+                except Exception as e:
+                    print("Errore durante lo spostamento automatico delle foto da Temp:", e)
+
+            return redirect(url_for('veicolo_detail', id=nuovo_veicolo_id, from_new=1))
         except sqlite3.IntegrityError:
             db.rollback()
             clienti = db.execute('SELECT * FROM clienti ORDER BY nome').fetchall()
