@@ -396,11 +396,21 @@
 </div>
 
 <script>
+    // Se c'è temp_ids in URL, popolalo nel campo hidden
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tempIds = urlParams.get('temp_ids');
+        if (tempIds) {
+            document.getElementById('temp_file_ids').value = tempIds;
+        }
+    });
+
     // Chiudi il dropdown di stampa cliccando fuori
     document.addEventListener('click', function(event) {
         var dropdown = document.getElementById('dropdownStampa');
+        if(!dropdown) return;
         var btn = dropdown.previousElementSibling;
-        if (!btn.contains(event.target) && !dropdown.contains(event.target)) {
+        if (btn && !btn.contains(event.target) && !dropdown.contains(event.target)) {
             dropdown.classList.add('hidden');
         }
     });

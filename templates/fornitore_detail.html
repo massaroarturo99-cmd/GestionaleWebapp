@@ -597,11 +597,21 @@ document.addEventListener("DOMContentLoaded", function() {
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-blue-50 transition-colors border-b border-gray-200";
 
+                        // Escape HTML to prevent XSS
+                        const escapeHtml = (unsafe) => {
+                            return (unsafe || '').toString()
+                                 .replace(/&/g, "&amp;")
+                                 .replace(/</g, "&lt;")
+                                 .replace(/>/g, "&gt;")
+                                 .replace(/"/g, "&quot;")
+                                 .replace(/'/g, "&#039;");
+                        };
+
                         tr.innerHTML = `
-                            <td class="px-5 py-4 font-bold text-gray-900">${item.nome_ricambio} <br><span class="text-xs font-mono text-gray-500">${item.codice_ricambio}</span></td>
-                            <td class="px-5 py-4 text-gray-700">${item.marchio}</td>
-                            <td class="px-5 py-4 text-gray-700">${item.modello_auto}</td>
-                            <td class="px-5 py-4 text-gray-700 text-sm">${item.anno}</td>
+                            <td class="px-5 py-4 font-bold text-gray-900">${escapeHtml(item.nome_ricambio)} <br><span class="text-xs font-mono text-gray-500">${escapeHtml(item.codice_ricambio)}</span></td>
+                            <td class="px-5 py-4 text-gray-700">${escapeHtml(item.marchio)}</td>
+                            <td class="px-5 py-4 text-gray-700">${escapeHtml(item.modello_auto)}</td>
+                            <td class="px-5 py-4 text-gray-700 text-sm">${escapeHtml(item.anno)}</td>
                             <td class="px-5 py-4 text-right whitespace-nowrap text-green-700 font-bold">€ ${parseFloat(item.ultimo_prezzo).toFixed(2)}</td>
                             <td class="px-5 py-4 text-center whitespace-nowrap">
                                 <button type="button" onclick="apriModificaCatalogoModal(${item.id}, \`${(item.codice_ricambio || '').replace(/'/g, "\\'")}\`, \`${(item.nome_ricambio || '').replace(/'/g, "\\'")}\`, \`${(item.marchio || '').replace(/'/g, "\\'")}\`, \`${(item.modello_auto || '').replace(/'/g, "\\'")}\`, \`${(item.anno || '').replace(/'/g, "\\'")}\`, ${item.ultimo_prezzo})" class="text-blue-500 hover:text-blue-700 mx-1 p-1" title="Modifica"><i class="fas fa-edit"></i></button>
