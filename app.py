@@ -659,13 +659,14 @@ def inject_notifications():
             diff = (d_consegna - today_date).days
 
             nome_v = f"{v['targa']} - {v['marca'] or ''} {v['modello'] or ''}".strip()
+            notifica_item = {'id': v['id'], 'nome': nome_v}
 
             if diff < 0:
-                notifications['ritardo'].append(nome_v)
+                notifications['ritardo'].append(notifica_item)
             elif diff == 0:
-                notifications['oggi'].append(nome_v)
+                notifications['oggi'].append(notifica_item)
             elif diff == 1:
-                notifications['domani'].append(nome_v)
+                notifications['domani'].append(notifica_item)
         except ValueError:
             pass # Invalid date format
 

@@ -104,21 +104,21 @@
                                     {% if notifications.ritardo|length > 0 %}
                                         <div class="px-4 py-1 bg-red-50 text-red-800 text-xs font-bold uppercase">In Ritardo</div>
                                         {% for n in notifications.ritardo %}
-                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-exclamation-circle text-red-500 mr-2"></i>{{ n }}</a>
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-exclamation-circle text-red-500 mr-2"></i>{{ n.nome }}</a>
                                         {% endfor %}
                                     {% endif %}
 
                                     {% if notifications.oggi|length > 0 %}
                                         <div class="px-4 py-1 bg-yellow-50 text-yellow-800 text-xs font-bold uppercase">Consegna Oggi</div>
                                         {% for n in notifications.oggi %}
-                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-calendar-day text-yellow-500 mr-2"></i>{{ n }}</a>
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-calendar-day text-yellow-500 mr-2"></i>{{ n.nome }}</a>
                                         {% endfor %}
                                     {% endif %}
 
                                     {% if notifications.domani|length > 0 %}
                                         <div class="px-4 py-1 bg-blue-50 text-blue-800 text-xs font-bold uppercase">Consegna Domani</div>
                                         {% for n in notifications.domani %}
-                                        <a href="/veicoli?filtro=tutti" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-clock text-blue-500 mr-2"></i>{{ n }}</a>
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-clock text-blue-500 mr-2"></i>{{ n.nome }}</a>
                                         {% endfor %}
                                     {% endif %}
                                 </div>
