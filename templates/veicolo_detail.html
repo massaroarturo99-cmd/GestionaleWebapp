@@ -8,7 +8,10 @@
     <!-- Colonna Sinistra: Form Modifica Dati -->
     <div class="flex-1 bg-white rounded-xl shadow-md p-6 ">
         <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-edit text-blue-500"></i> Dettagli Pratica</h3>
+            <div class="flex items-center space-x-4">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-edit text-blue-500"></i> Dettagli Pratica</h3>
+                <span id="autosave-status" class="text-sm font-bold text-gray-500 opacity-0 transition-opacity duration-300"></span>
+            </div>
             <div class="flex space-x-2">
                 {% set back_url = '/' if request.args.get('from_new') else (request.referrer or '/veicoli') %}
                 <a href="{{ back_url }}" class="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors" title="Indietro"><i class="fas fa-arrow-left"></i></a>
@@ -18,7 +21,7 @@
             </div>
         </div>
 
-        <form method="POST" action="/veicolo/{{ veicolo.id }}">
+        <form id="veicolo-form" method="POST" action="/veicolo/{{ veicolo.id }}">
             <input type="hidden" name="referrer" value="{{ back_url }}">
             <!-- SEZIONE 1: Dati Base -->
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border">
@@ -172,7 +175,7 @@
                                     <option value="M" {% if riga.gravita == 'M' %}selected{% endif %}>M (Medio)</option>
                                     <option value="G" {% if riga.gravita == 'G' %}selected{% endif %}>G (Grave)</option>
                                 </select>
-                                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                                <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
                             </div>
                             {% endfor %}
                         {% else %}
@@ -185,7 +188,7 @@
                                     <option value="M">M (Medio)</option>
                                     <option value="G">G (Grave)</option>
                                 </select>
-                                <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                                <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
                             </div>
                         {% endif %}
                     </div>
@@ -407,6 +410,68 @@
         }
     });
 
+    // --- AUTOSAVE LOGIC ---
+    const form = document.getElementById('veicolo-form');
+    const statusSpan = document.getElementById('autosave-status');
+    let autosaveTimeout;
+
+    function triggerAutosave() {
+        // Show saving status
+        statusSpan.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-500"></i> Salvataggio in corso...';
+        statusSpan.classList.remove('opacity-0', 'text-green-500', 'text-red-500');
+        statusSpan.classList.add('opacity-100', 'text-gray-500');
+
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                statusSpan.innerHTML = 'Salvato ✓';
+                statusSpan.classList.remove('text-gray-500', 'text-red-500');
+                statusSpan.classList.add('text-green-500');
+
+                // Hide after 2 seconds
+                setTimeout(() => {
+                    statusSpan.classList.remove('opacity-100');
+                    statusSpan.classList.add('opacity-0');
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Errore durante l\'autosave:', error);
+            statusSpan.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Errore';
+            statusSpan.classList.remove('text-gray-500', 'text-green-500');
+            statusSpan.classList.add('text-red-500');
+        });
+    }
+
+    // Use event delegation on the form to catch all changes
+    form.addEventListener('change', function(e) {
+        // Only trigger on actual form inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            triggerAutosave();
+        }
+    });
+
+    // For text inputs/textareas, use a debounced input event to save while typing
+    form.addEventListener('input', function(e) {
+        if ((e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'number')) || e.target.tagName === 'TEXTAREA') {
+            clearTimeout(autosaveTimeout);
+            autosaveTimeout = setTimeout(triggerAutosave, 800); // 800ms debounce
+        }
+    });
+    // --- END AUTOSAVE LOGIC ---
+
     // Funzione per aggiungere righe di ripristino
     function addRipristinoRow() {
         const container = document.getElementById('ripristino_container');
@@ -420,7 +485,7 @@
                 <option value="M">M (Medio)</option>
                 <option value="G">G (Grave)</option>
             </select>
-            <button type="button" onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+            <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
         `;
         container.appendChild(row);
     }

@@ -775,6 +775,9 @@ def veicolo_detail(id):
         db.commit()
         sync_db_to_drive(id)
 
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'status': 'success'})
+
         return redirect(referrer)
 
     veicolo = db.execute('''
