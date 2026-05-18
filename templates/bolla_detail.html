@@ -24,7 +24,7 @@
             <form method="POST" action="/bolla/{{ bolla.id }}">
                 <div class="mb-2">
                     <label class="block text-gray-700 text-xs font-bold mb-1">Codice</label>
-                    <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="codice" type="text" inputmode="numeric" pattern="[0-9]*" value="{{ bolla.codice }}">
+                    <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" name="codice" type="text" value="{{ bolla.codice }}">
                 </div>
                 <div class="mb-2">
                     <label class="block text-gray-700 text-xs font-bold mb-1">Data</label>

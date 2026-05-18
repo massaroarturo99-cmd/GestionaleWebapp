@@ -67,6 +67,7 @@ def init_db():
                 prezzo REAL DEFAULT 0.0,
                 ordinato BOOLEAN DEFAULT 0,
                 in_carrozzeria BOOLEAN DEFAULT 0,
+                bolla_prodotto_id INTEGER,
                 FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
             )
         ''')
@@ -374,6 +375,15 @@ def sync_db_to_drive(veicolo_id=None):
                             try:
                                 ricambi = db.execute('SELECT * FROM ricambi WHERE veicolo_id = ?', (veicolo_id,)).fetchall()
 
+                                # Retrieve photo count for background sync
+                                foto_count = 0
+                                if v['drive_folder_id']:
+                                    try:
+                                        photos = drive_service.list_photos(service, v['drive_folder_id'])
+                                        foto_count = len(photos)
+                                    except Exception as e:
+                                        print("Failed to load photos count for PDF sync:", e)
+
                                 # In the background thread context, we need to pass the base_url or absolute path
                                 # to render_template so that pdfkit can find local images. But app_context is available.
                                 import datetime
@@ -405,8 +415,12 @@ def sync_db_to_drive(veicolo_id=None):
                                     testo_ripristino_html=ripristino_html,
                                     testo_ripristino=v['lavorazioni_ripristino'] or '',
                                     ricambi=ricambi,
+                                    manodopera="{:.2f}".format(v['manodopera'] or 0),
+                                    costo_ricambi="{:.2f}".format(v['costo_ricambi'] or 0),
+                                    totale="{:.2f}".format(v['totale'] or 0),
                                     acconto="{:.2f}".format(v['acconto'] or 0),
-                                    totale="{:.2f}".format(v['totale'] or 0)
+                                    saldo="{:.2f}".format((v['totale'] or 0) - (v['acconto'] or 0)),
+                                    foto_count=foto_count
                                 )
 
                                 # Replace relative static path with absolute local path for pdfkit to work without server running
@@ -902,7 +916,18 @@ def veicolo_stampa(id):
         return redirect(url_for('veicoli_list'))
     ricambi = db.execute('SELECT * FROM ricambi WHERE veicolo_id = ?', (id,)).fetchall()
     ripristino_righe = db.execute('SELECT * FROM lavorazioni_ripristino_righe WHERE veicolo_id = ?', (id,)).fetchall()
-    return render_template('stampa_veicolo.html', veicolo=veicolo, ricambi=ricambi, tipo=tipo, ripristino_righe=ripristino_righe)
+
+    # Calculate photo count from Google Drive (as we don't store them in db)
+    foto_count = 0
+    service = drive_service.get_drive_service()
+    if service and veicolo['drive_folder_id']:
+        try:
+            photos = drive_service.list_photos(service, veicolo['drive_folder_id'])
+            foto_count = len(photos)
+        except Exception as e:
+            print("Failed to load photos count:", e)
+
+    return render_template('stampa_veicolo.html', veicolo=veicolo, ricambi=ricambi, tipo=tipo, ripristino_righe=ripristino_righe, foto_count=foto_count)
 
 
 # ================= RICAMBI ================= #

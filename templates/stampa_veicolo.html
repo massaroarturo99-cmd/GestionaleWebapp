@@ -58,7 +58,19 @@
     </header>
 
     <!-- Dati Veicolo e Cliente -->
-    <div class="flex border-2 border-gray-800 rounded-lg overflow-hidden mb-6">
+    {% if foto_count > 0 %}
+    <div class="flex justify-end mb-2 no-print">
+        <div class="border border-gray-300 rounded px-3 py-1 bg-gray-50 text-xs font-bold text-gray-600 flex items-center shadow-sm">
+            <i class="fas fa-camera mr-2 text-blue-500"></i> Foto presenti: {{ foto_count }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="flex border-2 border-gray-800 rounded-lg overflow-hidden mb-6 relative">
+        <!-- Riquadro Foto per la stampa visibile in pagina -->
+        <div class="absolute top-2 right-2 border border-gray-400 bg-white px-2 py-1 text-[10px] font-bold text-gray-700 rounded shadow-sm print:block hidden">
+            <i class="fas fa-camera"></i> Foto: {{ foto_count }}
+        </div>
         <div class="w-1/2 p-4 border-r-2 border-gray-800 bg-gray-50">
             <h3 class="font-bold border-b border-gray-300 pb-1 mb-2 text-sm uppercase">Dati Veicolo</h3>
             <div class="grid grid-cols-2 gap-2 text-sm">
@@ -132,14 +144,26 @@
     <!-- Totali (Solo per tipo CLIENTE) -->
     {% if tipo == 'cliente' %}
     <div class="flex justify-end mt-4">
-        <div class="w-64 border-t-2 border-gray-800 pt-2">
-            <div class="flex justify-between mb-1">
-                <span class="text-gray-600 text-sm font-bold">Acconto Versato:</span>
+        <div class="w-80 border-t-2 border-gray-800 pt-3">
+            <div class="flex justify-between mb-1 text-sm">
+                <span class="text-gray-600 font-bold">Totale Manodopera:</span>
+                <span>€ {{ "%.2f"|format(veicolo.manodopera or 0) }}</span>
+            </div>
+            <div class="flex justify-between mb-2 text-sm border-b border-gray-300 pb-2">
+                <span class="text-gray-600 font-bold">Totale Ricambi:</span>
+                <span>€ {{ "%.2f"|format(veicolo.costo_ricambi or 0) }}</span>
+            </div>
+            <div class="flex justify-between mb-1 text-sm font-bold">
+                <span class="text-gray-800">TOTALE COMPLESSIVO:</span>
+                <span>€ {{ "%.2f"|format(veicolo.totale or 0) }}</span>
+            </div>
+            <div class="flex justify-between mb-2 text-sm text-red-600">
+                <span class="font-bold">- Acconto Versato:</span>
                 <span>€ {{ "%.2f"|format(veicolo.acconto or 0) }}</span>
             </div>
-            <div class="flex justify-between text-lg font-black bg-gray-100 p-1 rounded">
-                <span>TOTALE:</span>
-                <span>€ {{ "%.2f"|format(veicolo.totale or 0) }}</span>
+            <div class="flex justify-between text-xl font-black bg-gray-100 p-2 rounded border border-gray-300 mt-2">
+                <span>SALDO DA PAGARE:</span>
+                <span>€ {{ "%.2f"|format((veicolo.totale or 0) - (veicolo.acconto or 0)) }}</span>
             </div>
         </div>
     </div>

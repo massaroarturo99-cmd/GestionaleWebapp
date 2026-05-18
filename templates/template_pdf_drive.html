@@ -87,11 +87,20 @@
 
     <table>
         <tr>
-            <td width="60%"></td>
-            <td width="40%">
+            <td width="55%">
+                {% if foto_count > 0 %}
+                <div style="border: 1px solid #aaa; padding: 5px; width: 150px; background-color: #f4f4f4; text-align: center; margin-top: 10px;">
+                    <strong>Foto presenti: {{ foto_count }}</strong>
+                </div>
+                {% endif %}
+            </td>
+            <td width="45%">
                 <table class="bordered">
-                    <tr><th class="bg-light">Acconto Versato:</th><td class="text-right">€ {{ acconto }}</td></tr>
-                    <tr><th class="bg-light">TOTALE:</th><td class="text-right" style="font-size: 16px; font-weight: bold;">€ {{ totale }}</td></tr>
+                    <tr><th class="bg-light">Totale Manodopera:</th><td class="text-right">€ {{ manodopera }}</td></tr>
+                    <tr><th class="bg-light">Totale Ricambi:</th><td class="text-right">€ {{ costo_ricambi }}</td></tr>
+                    <tr><th class="bg-light">TOTALE COMPLESSIVO:</th><td class="text-right">€ {{ totale }}</td></tr>
+                    <tr><th class="bg-light" style="color: darkred;">- Acconto Versato:</th><td class="text-right" style="color: darkred;">€ {{ acconto }}</td></tr>
+                    <tr><th class="bg-light" style="font-size: 14px;">SALDO DA PAGARE:</th><td class="text-right" style="font-size: 14px; font-weight: bold;">€ {{ saldo }}</td></tr>
                 </table>
             </td>
         </tr>
