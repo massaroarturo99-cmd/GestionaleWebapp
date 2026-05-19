@@ -152,8 +152,31 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-xs font-bold mb-1">Sostituzione</label>
-                    <textarea rows="3" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="lavorazioni_sostituzione" placeholder="Elenco pezzi da sostituire...">{{ veicolo.lavorazioni_sostituzione or '' }}</textarea>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="block text-gray-700 text-xs font-bold">Sostituzione</label>
+                        <button type="button" onclick="addSostituzioneRow()" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded shadow-sm hover:bg-blue-200">
+                            <i class="fas fa-plus"></i> Aggiungi Riga
+                        </button>
+                    </div>
+
+                    <div id="sostituzione_container" class="space-y-2">
+                        {% if veicolo.lavorazioni_sostituzione %}
+                            {% for riga in veicolo.lavorazioni_sostituzione.split('\n') %}
+                                {% if riga.strip() %}
+                                <div class="flex space-x-2 items-center">
+                                    <input type="text" name="sost_desc[]" value="{{ riga.strip() }}" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Pezzo da sostituire...">
+                                    <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <!-- Empty row for new entry -->
+                            <div class="flex space-x-2 items-center">
+                                <input type="text" name="sost_desc[]" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Pezzo da sostituire...">
+                                <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="mb-2">
@@ -174,6 +197,7 @@
                                     <option value="L" {% if riga.gravita == 'L' %}selected{% endif %}>L (Lieve)</option>
                                     <option value="M" {% if riga.gravita == 'M' %}selected{% endif %}>M (Medio)</option>
                                     <option value="G" {% if riga.gravita == 'G' %}selected{% endif %}>G (Grave)</option>
+                                    <option value="V" {% if riga.gravita == 'V' %}selected{% endif %}>V (Verniciatura)</option>
                                 </select>
                                 <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
                             </div>
@@ -187,12 +211,13 @@
                                     <option value="L">L (Lieve)</option>
                                     <option value="M">M (Medio)</option>
                                     <option value="G">G (Grave)</option>
+                                    <option value="V">V (Verniciatura)</option>
                                 </select>
                                 <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
                             </div>
                         {% endif %}
                     </div>
-                    <p class="text-xs text-gray-500 mt-2">Leggenda: SF = Sfumatura, L = Lieve, M = Medio, G = Grave</p>
+                    <p class="text-xs text-gray-500 mt-2">Leggenda: SF = Sfumatura, L = Lieve, M = Medio, G = Grave, V = Verniciatura</p>
                 </div>
             </div>
 
@@ -482,6 +507,18 @@
     });
     // --- END AUTOSAVE LOGIC ---
 
+    // Funzione per aggiungere righe di sostituzione
+    function addSostituzioneRow() {
+        const container = document.getElementById('sostituzione_container');
+        const row = document.createElement('div');
+        row.className = 'flex space-x-2 items-center mt-2';
+        row.innerHTML = `
+            <input type="text" name="sost_desc[]" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Pezzo da sostituire...">
+            <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(row);
+    }
+
     // Funzione per aggiungere righe di ripristino
     function addRipristinoRow() {
         const container = document.getElementById('ripristino_container');
@@ -494,6 +531,7 @@
                 <option value="L">L (Lieve)</option>
                 <option value="M">M (Medio)</option>
                 <option value="G">G (Grave)</option>
+                <option value="V">V (Verniciatura)</option>
             </select>
             <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
         `;

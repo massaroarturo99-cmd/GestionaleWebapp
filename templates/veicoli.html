@@ -19,6 +19,7 @@
         <div class="relative">
             <select onchange="window.location.href='/veicoli?filtro={{ filtro|urlencode }}&ord=' + this.value" class="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500 shadow-sm text-sm">
                 <option value="data" {% if ordinamento == 'data' %}selected{% endif %}>Ordina per Data Inserimento</option>
+                <option value="stato" {% if ordinamento == 'stato' %}selected{% endif %}>Ordina per Stato</option>
                 <option value="targa" {% if ordinamento == 'targa' %}selected{% endif %}>Ordina per Targa</option>
                 <option value="marca" {% if ordinamento == 'marca' %}selected{% endif %}>Ordina per Marca</option>
             </select>

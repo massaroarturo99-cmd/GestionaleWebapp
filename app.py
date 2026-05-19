@@ -651,6 +651,8 @@ def veicoli_list():
         query += 'ORDER BY v.targa ASC'
     elif ordinamento == 'marca':
         query += 'ORDER BY v.marca ASC, v.modello ASC'
+    elif ordinamento == 'stato':
+        query += 'ORDER BY v.stato ASC, v.data_arrivo DESC'
     else:
         query += 'ORDER BY v.data_arrivo DESC, v.id DESC'
 
@@ -788,7 +790,15 @@ def veicolo_detail(id):
         stato = request.form.get('stato')
         data_arrivo = request.form.get('data_arrivo')
         data_consegna_prevista = request.form.get('data_consegna_prevista')
-        lavorazioni_sostituzione = request.form.get('lavorazioni_sostituzione')
+
+        # Sostituzione dynamic rows back to string
+        sost_desc_list = request.form.getlist('sost_desc[]')
+        if sost_desc_list:
+            lavorazioni_sostituzione = '\n'.join([x.strip() for x in sost_desc_list if x.strip()])
+        else:
+            # Fallback per textarea originale o vuoto
+            lavorazioni_sostituzione = request.form.get('lavorazioni_sostituzione')
+
         lavorazioni_ripristino = request.form.get('lavorazioni_ripristino')
         manodopera = float(request.form.get('manodopera') or 0.0)
         costo_ricambi = float(request.form.get('costo_ricambi') or 0.0)
