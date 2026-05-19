@@ -100,6 +100,19 @@
 
                 <hr class="my-4 border-gray-200">
 
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Numero Pratica WinCar</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-desktop text-gray-400"></i>
+                        </div>
+                        <input class="appearance-none border rounded w-full py-2 pl-8 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-sm uppercase" name="numero_wincar" type="text" placeholder="Es. 123/24">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Se inserito, le foto verranno sincronizzate nella cartella C:\WinCar\Archivi\Pratiche\[NUMERO]\Pubblici\Foto</p>
+                </div>
+
+                <hr class="my-4 border-gray-200">
+
                 <div x-data="{ showControparte: {{ 'true' if veicolo.controparte_nome or veicolo.controparte_telefono else 'false' }} }">
                     <label class="inline-flex items-center cursor-pointer mb-2">
                         <input type="checkbox" class="form-checkbox text-blue-600 h-5 w-5" x-model="showControparte">

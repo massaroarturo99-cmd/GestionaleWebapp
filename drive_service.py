@@ -96,6 +96,15 @@ def list_photos(service, folder_id):
 def delete_photo(service, file_id):
     service.files().delete(fileId=file_id).execute()
 
+def download_file(service, file_id, dest_path):
+    import io
+    request = service.files().get_media(fileId=file_id)
+    fh = io.FileIO(dest_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+
 def move_file(service, file_id, new_folder_id):
     # Retrieve the existing parents to remove
     file = service.files().get(fileId=file_id, fields='parents').execute()

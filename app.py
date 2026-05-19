@@ -55,6 +55,7 @@ def init_db():
                 drive_folder_id TEXT,
                 controparte_nome TEXT,
                 controparte_telefono TEXT,
+                numero_wincar TEXT,
                 FOREIGN KEY (cliente_id) REFERENCES clienti (id)
             )
         ''')
@@ -166,6 +167,12 @@ def migrate_db():
     except sqlite3.OperationalError:
         db.execute("ALTER TABLE veicoli ADD COLUMN controparte_nome TEXT")
         db.execute("ALTER TABLE veicoli ADD COLUMN controparte_telefono TEXT")
+        db.commit()
+
+    try:
+        db.execute("SELECT numero_wincar FROM veicoli LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE veicoli ADD COLUMN numero_wincar TEXT")
         db.commit()
 
     try:
@@ -303,6 +310,64 @@ else:
 
 
 import threading
+import shutil
+
+def sincronizza_foto_wincar(veicolo_id):
+    """Sincronizza le foto del veicolo con la cartella locale di WinCar."""
+    db = get_db()
+    veicolo = db.execute('SELECT targa, numero_wincar, drive_folder_id FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
+
+    if not veicolo or not veicolo['numero_wincar']:
+        return
+
+    numero_wincar = veicolo['numero_wincar'].strip()
+    targa = veicolo['targa'].strip().upper()
+
+    if not numero_wincar:
+        return
+
+    percorso_foto = f"C:\\WinCar\\Archivi\\Pratiche\\{numero_wincar}\\Pubblici\\Foto"
+
+    # Controlla se la cartella WinCar esiste
+    if not os.path.exists(percorso_foto):
+        print(f"[WinCar Sync] Cartella non trovata per pratica {numero_wincar}. Nessuna operazione eseguita.")
+        return
+
+    print(f"[WinCar Sync] Inizio sincronizzazione per pratica {numero_wincar} in {percorso_foto}...")
+    service = drive_service.get_drive_service()
+    if not service or not veicolo['drive_folder_id']:
+        print("[WinCar Sync] Errore: Servizio Drive non disponibile o cartella drive non associata.")
+        return
+
+    try:
+        photos = drive_service.list_photos(service, veicolo['drive_folder_id'])
+        for photo in photos:
+            nome_originale = photo['name']
+
+            # Formatta il nome: se inizia già con TARGA_ va bene, altrimenti lo aggiungiamo
+            if nome_originale.upper().startswith(f"{targa}_"):
+                nome_finale = nome_originale
+            else:
+                # Caso generico o rinominato male
+                nome_finale = f"{targa}_{nome_originale}"
+
+            percorso_file_dest = os.path.join(percorso_foto, nome_finale)
+
+            # Scarica se non esiste o (opzionale) se vogliamo sovrascriverlo sempre
+            # Per evitare richieste inutili a Google Drive, lo scarichiamo solo se manca
+            if not os.path.exists(percorso_file_dest):
+                print(f"[WinCar Sync] Scaricamento {nome_finale}...")
+                drive_service.download_file(service, photo['id'], percorso_file_dest)
+            else:
+                # Il file esiste già, sovrascriverlo? Il task dice "Se un file con quello stesso nome esiste già nel percorso locale, sovrascrivilo (update)."
+                # Visto che i nomi hanno un timestamp (TARGA_DATA_ORA_NUM.jpg) è improbabile avere collisioni a parità di ID/Timestamp,
+                # ma procediamo al download per sicurezza come richiesto.
+                print(f"[WinCar Sync] Sovrascrittura {nome_finale}...")
+                drive_service.download_file(service, photo['id'], percorso_file_dest)
+
+        print(f"[WinCar Sync] Completato.")
+    except Exception as e:
+        print(f"[WinCar Sync] Errore durante la sincronizzazione: {e}")
 
 def format_drive_folder_name(v):
     return f"{v['targa']} {v['marca'] or ''} {v['modello'] or ''} {v['anno'] or ''}".strip().upper()
@@ -712,6 +777,7 @@ def veicolo_nuovo():
 
         controparte_nome = (request.form.get('controparte_nome') or '').upper()
         controparte_telefono = request.form.get('controparte_telefono')
+        numero_wincar = request.form.get('numero_wincar')
 
         client_mode = request.form.get('client_mode', 'select')
         cliente_id = None
@@ -727,9 +793,9 @@ def veicolo_nuovo():
 
         try:
             cursor = db.execute('''
-                INSERT INTO veicoli (targa, marca, modello, cliente_id, stato, data_arrivo, controparte_nome, controparte_telefono)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (targa, marca, modello, cliente_id, stato, data_arrivo, controparte_nome, controparte_telefono))
+                INSERT INTO veicoli (targa, marca, modello, cliente_id, stato, data_arrivo, controparte_nome, controparte_telefono, numero_wincar)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (targa, marca, modello, cliente_id, stato, data_arrivo, controparte_nome, controparte_telefono, numero_wincar))
             db.commit()
 
             nuovo_veicolo_id = cursor.lastrowid
@@ -766,6 +832,9 @@ def veicolo_nuovo():
 
                     except Exception as e:
                         print("Errore durante lo spostamento mirato delle foto da Temp:", e)
+
+            # Trigger WinCar Sync in background
+            threading.Thread(target=sincronizza_foto_wincar, args=(nuovo_veicolo_id,)).start()
 
             return redirect(url_for('veicolo_detail', id=nuovo_veicolo_id, from_new=1))
         except sqlite3.IntegrityError:
@@ -808,6 +877,7 @@ def veicolo_detail(id):
 
         controparte_nome = (request.form.get('controparte_nome') or '').upper()
         controparte_telefono = request.form.get('controparte_telefono')
+        numero_wincar = request.form.get('numero_wincar')
 
         # Auto-update status based on delivery and totals
         if riconsegnata == 1:
@@ -823,10 +893,10 @@ def veicolo_detail(id):
             UPDATE veicoli SET
                 marca=?, modello=?, anno=?, cliente_id=?, stato=?, data_arrivo=?,
                 data_consegna_prevista=?, lavorazioni_sostituzione=?, lavorazioni_ripristino=?,
-                manodopera=?, costo_ricambi=?, totale=?, acconto=?, riconsegnata=?, controparte_nome=?, controparte_telefono=?
+                manodopera=?, costo_ricambi=?, totale=?, acconto=?, riconsegnata=?, controparte_nome=?, controparte_telefono=?, numero_wincar=?
             WHERE id=?
         ''', (marca, modello, anno, cliente_id, stato, data_arrivo, data_consegna_prevista,
-              lavorazioni_sostituzione, lavorazioni_ripristino, manodopera, costo_ricambi, totale, acconto, riconsegnata, controparte_nome, controparte_telefono, id))
+              lavorazioni_sostituzione, lavorazioni_ripristino, manodopera, costo_ricambi, totale, acconto, riconsegnata, controparte_nome, controparte_telefono, numero_wincar, id))
 
         # Save Lavorazioni Ripristino Righe (SF/L/M/G)
         db.execute('DELETE FROM lavorazioni_ripristino_righe WHERE veicolo_id = ?', (id,))
@@ -840,6 +910,9 @@ def veicolo_detail(id):
 
         db.commit()
         sync_db_to_drive(id)
+
+        # Trigger WinCar Sync in background per non bloccare la request (specialmente per l'autosave)
+        threading.Thread(target=sincronizza_foto_wincar, args=(id,)).start()
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'status': 'success'})
@@ -922,6 +995,9 @@ def veicolo_foto_upload(id):
                 drive_service.upload_photo(service, folder_id, filepath, filename)
                 os.remove(filepath)
 
+        # Trigger WinCar Sync in background per le foto aggiunte
+        threading.Thread(target=sincronizza_foto_wincar, args=(id,)).start()
+
     return redirect(url_for('veicolo_detail', id=id))
 
 @app.route('/veicolo/<int:id>/foto_veloce', methods=['POST'])
@@ -956,6 +1032,9 @@ def veicolo_foto_veloce(id):
                 file.save(filepath)
                 drive_service.upload_photo(service, folder_id, filepath, filename)
                 os.remove(filepath)
+
+        # Trigger WinCar Sync in background per le foto aggiunte
+        threading.Thread(target=sincronizza_foto_wincar, args=(id,)).start()
 
     return redirect(request.referrer or url_for('veicoli_list'))
 
