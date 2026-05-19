@@ -540,7 +540,7 @@ def assign_temp_photos():
         return jsonify({'error': 'Dati mancanti'}), 400
 
     db = get_db()
-    veicolo = db.execute('SELECT targa FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
+    veicolo = db.execute('SELECT * FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
     if not veicolo:
         return jsonify({'error': 'Veicolo non trovato'}), 404
 
@@ -549,12 +549,34 @@ def assign_temp_photos():
         return jsonify({'error': 'Google Drive non configurato'}), 500
 
     root_id = drive_service.get_or_create_root_folder(service)
-    target_folder_id = drive_service.get_or_create_vehicle_folder(service, root_id, veicolo['targa'].upper())
+
+    # Bug 1 Fix: Usa la stessa logica di cartelle per recuperare l'ID reale
+    if veicolo['drive_folder_id']:
+        target_folder_id = veicolo['drive_folder_id']
+    else:
+        folder_name = format_drive_folder_name(veicolo)
+        target_folder_id = drive_service.get_or_create_vehicle_folder(service, root_id, folder_name)
+        db.execute('UPDATE veicoli SET drive_folder_id = ? WHERE id = ?', (target_folder_id, veicolo_id))
+        db.commit()
 
     moved = 0
+    targa_pulita = (veicolo['targa'] or 'ND').strip().upper()
     for file_id in photo_ids:
         try:
+            # 1. Sposta
             drive_service.move_file(service, file_id, target_folder_id)
+            # 2. Rinomina (Bug 2 Fix)
+            try:
+                file_info = service.files().get(fileId=file_id, fields='name').execute()
+                old_name = file_info.get('name', '')
+                if old_name.upper().startswith('TEMP_'):
+                    new_name = old_name[5:] # Remove TEMP_
+                    new_name = f"{targa_pulita}_{new_name}"
+                    print(f"[RENAME API] Rinominato: {old_name} -> {new_name}")
+                    drive_service.rename_file(service, file_id, new_name)
+            except Exception as re:
+                print(f"Errore durante rinominazione file {file_id}:", re)
+
             moved += 1
         except Exception as e:
             print(f"Errore spostamento file {file_id}: {e}")
