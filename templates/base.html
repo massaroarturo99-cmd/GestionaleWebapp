@@ -143,6 +143,68 @@
         </div>
     </main>
 
+    <!-- Modal Cliente Rapido Globale -->
+    <div x-data="{ openModalClienteRapido: false, formCliente: { nome: '', telefono: '', email: '' }, isSaving: false }"
+         @open-cliente-rapido.window="openModalClienteRapido = true"
+         x-show="openModalClienteRapido"
+         class="fixed inset-0 bg-gray-900 bg-opacity-75 z-[60] flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6" @click.away="!isSaving ? openModalClienteRapido = false : null">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold"><i class="fas fa-user-plus text-blue-500"></i> Nuovo Cliente Rapido</h3>
+                <button @click="openModalClienteRapido = false" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <form @submit.prevent="
+                isSaving = true;
+                fetch('/api/cliente_rapido', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formCliente)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        const select = document.getElementById('cliente_select');
+                        if (select) {
+                            const option = document.createElement('option');
+                            option.value = data.id;
+                            option.text = data.nome + (data.telefono ? ' (' + data.telefono + ')' : '');
+                            select.appendChild(option);
+                            select.value = data.id;
+                            // Trigger change for autosave
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        openModalClienteRapido = false;
+                        formCliente = { nome: '', telefono: '', email: '' };
+                    } else {
+                        alert('Errore: ' + data.error);
+                    }
+                })
+                .catch(err => { console.error(err); alert('Errore di rete'); })
+                .finally(() => { isSaving = false; })
+            ">
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Nome / Ragione Sociale *</label>
+                    <input x-model="formCliente.nome" required type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Telefono</label>
+                    <input x-model="formCliente.telefono" type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Email / Note</label>
+                    <input x-model="formCliente.email" type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" @click="openModalClienteRapido = false" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition-colors text-sm">Annulla</button>
+                    <button type="submit" :disabled="isSaving" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded transition-colors text-sm flex items-center">
+                        <span x-show="!isSaving">Salva Cliente</span>
+                        <span x-show="isSaving"><i class="fas fa-spinner fa-spin mr-1"></i> Salvataggio...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         document.getElementById('current-date').textContent = new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     </script>

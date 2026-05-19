@@ -1079,6 +1079,30 @@ def cliente_nuovo():
     db.commit()
     return redirect(url_for('clienti_list'))
 
+@app.route('/api/cliente_rapido', methods=['POST'])
+def api_cliente_rapido():
+    db = get_db()
+    data = request.json or {}
+    nome = (data.get('nome') or '').upper()
+    telefono = data.get('telefono')
+    email = data.get('email') # Potremmo metterlo nelle note o ignorarlo se non c'è la colonna
+
+    if not nome:
+        return jsonify({'success': False, 'error': 'Il nome è obbligatorio.'}), 400
+
+    note = f"Email: {email}" if email else None
+
+    cursor = db.execute('INSERT INTO clienti (nome, telefono, note) VALUES (?, ?, ?)', (nome, telefono, note))
+    db.commit()
+    new_id = cursor.lastrowid
+
+    return jsonify({
+        'success': True,
+        'id': new_id,
+        'nome': nome,
+        'telefono': telefono
+    })
+
 @app.route('/cliente/<int:id>/aggiorna', methods=['POST'])
 def cliente_aggiorna(id):
     db = get_db()
