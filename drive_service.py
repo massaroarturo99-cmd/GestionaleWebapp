@@ -73,6 +73,10 @@ def rename_folder(service, folder_id, new_name):
     file_metadata = {'name': new_name}
     service.files().update(fileId=folder_id, body=file_metadata).execute()
 
+def rename_file(service, file_id, new_name):
+    file_metadata = {'name': new_name}
+    service.files().update(fileId=file_id, body=file_metadata).execute()
+
 def upload_photo(service, folder_id, file_path, filename):
     file_metadata = {
         'name': filename,

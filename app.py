@@ -510,14 +510,15 @@ def upload_temp_photos():
 
             try:
                 uploaded = drive_service.upload_photo(service, temp_folder_id, filepath, final_filename)
-                uploaded_files.append(uploaded)
+                if uploaded:
+                    uploaded_files.append(uploaded)
             except Exception as e:
                 print(f"Errore upload temp foto: {e}")
             finally:
                 if os.path.exists(filepath):
                     os.remove(filepath)
 
-    return jsonify({'success': True, 'uploaded': len(uploaded_files)})
+    return jsonify({'success': True, 'uploaded': len(uploaded_files), 'uploaded_ids': uploaded_files})
 
 @app.route('/api/temp_photos', methods=['GET'])
 def get_temp_photos():
@@ -712,26 +713,35 @@ def veicolo_nuovo():
             # Sync to drive creates the actual vehicle folder and updates texts
             sync_db_to_drive(nuovo_veicolo_id)
 
-            # Trasloco automatico: sposta tutte le foto da Temp_Officina alla nuova cartella
-            service = drive_service.get_drive_service()
-            if service:
-                try:
-                    root_id = drive_service.get_or_create_root_folder(service)
+            # Trasloco automatico: sposta SOLO le foto caricate in questa sessione da Temp_Officina
+            temp_ids_str = request.form.get('temp_file_ids')
+            if temp_ids_str:
+                service = drive_service.get_drive_service()
+                if service:
+                    try:
+                        root_id = drive_service.get_or_create_root_folder(service)
 
-                    # Usa lo stesso format utilizzato in sync_db_to_drive per calcolare il nome cartella
-                    # We can fetch the new vehicle info just inserted to get the correct name
-                    v = db.execute('SELECT * FROM veicoli WHERE id = ?', (nuovo_veicolo_id,)).fetchone()
-                    folder_name = format_drive_folder_name(v)
+                        v = db.execute('SELECT * FROM veicoli WHERE id = ?', (nuovo_veicolo_id,)).fetchone()
+                        folder_name = format_drive_folder_name(v)
+                        target_folder_id = drive_service.get_or_create_vehicle_folder(service, root_id, folder_name)
 
-                    target_folder_id = drive_service.get_or_create_vehicle_folder(service, root_id, folder_name)
-                    temp_folder_id = drive_service.get_or_create_temp_folder(service)
+                        # Extract list of IDs directly and move only those
+                        photo_ids = [pid.strip() for pid in temp_ids_str.split(',') if pid.strip()]
+                        for photo_id in photo_ids:
+                            file_moved = drive_service.move_file(service, photo_id, target_folder_id)
+                            # Rename the file to replace TEMP_ or temp_ with the actual Targa
+                            try:
+                                file_info = service.files().get(fileId=photo_id, fields='name').execute()
+                                old_name = file_info.get('name', '')
+                                if old_name.upper().startswith('TEMP_'):
+                                    new_name = old_name[5:] # Remove TEMP_
+                                    new_name = f"{targa}_{new_name}"
+                                    drive_service.rename_file(service, photo_id, new_name)
+                            except Exception as re:
+                                print(f"Errore durante rinominazione file {photo_id}:", re)
 
-                    photos = drive_service.list_photos(service, temp_folder_id)
-                    for photo in photos:
-                        drive_service.move_file(service, photo['id'], target_folder_id)
-
-                except Exception as e:
-                    print("Errore durante lo spostamento automatico delle foto da Temp:", e)
+                    except Exception as e:
+                        print("Errore durante lo spostamento mirato delle foto da Temp:", e)
 
             return redirect(url_for('veicolo_detail', id=nuovo_veicolo_id, from_new=1))
         except sqlite3.IntegrityError:

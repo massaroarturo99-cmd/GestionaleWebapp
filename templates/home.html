@@ -348,7 +348,7 @@ function homeManager() {
                 if (!data.success) {
                     alert('Errore caricamento in Temp');
                 }
-                return data.success;
+                return data; // Returns the full JSON object including uploaded_ids
             } catch (err) {
                 console.error(err);
                 alert('Errore di rete durante il caricamento');
@@ -360,8 +360,8 @@ function homeManager() {
 
         async assignToVehicle() {
             if (!this.selectedVeicoloId) return;
-            const success = await this._uploadToTempFolder();
-            if (success) {
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
                 // Since they are now in temp, immediately assign them.
                 // We need to fetch the temp folder again or we can do a trick:
                 // Actually it's cleaner to just upload directly to temp, then call the move API.
@@ -374,16 +374,20 @@ function homeManager() {
         },
 
         async saveToTempAndCreateNew() {
-            const success = await this._uploadToTempFolder();
-            if (success) {
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
                 this.showScattiModal = false;
-                window.location.href = '/veicolo/nuovo';
+                let url = '/veicolo/nuovo';
+                if (data.uploaded_ids && data.uploaded_ids.length > 0) {
+                    url += '?temp_ids=' + data.uploaded_ids.join(',');
+                }
+                window.location.href = url;
             }
         },
 
         async saveToTempAndClose() {
-            const success = await this._uploadToTempFolder();
-            if (success) {
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
                 this.showScattiModal = false;
                 this.filesToUpload = [];
                 this.photoPreviews = [];
