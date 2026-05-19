@@ -74,6 +74,16 @@ def init_db():
         ''')
 
         db.execute('''
+            CREATE TABLE IF NOT EXISTS wincar_sync_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                veicolo_id INTEGER,
+                file_id TEXT NOT NULL UNIQUE,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
+            )
+        ''')
+
+        db.execute('''
             CREATE TABLE IF NOT EXISTS lavorazioni_ripristino_righe (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 veicolo_id INTEGER,
@@ -148,6 +158,21 @@ def init_db():
 
 def migrate_db():
     db = get_db()
+
+    try:
+        db.execute("SELECT id FROM wincar_sync_log LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS wincar_sync_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                veicolo_id INTEGER,
+                file_id TEXT NOT NULL UNIQUE,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
+            )
+        ''')
+        db.commit()
+
     try:
         db.execute("SELECT lavorazioni_sostituzione FROM veicoli LIMIT 1")
     except sqlite3.OperationalError:
@@ -314,60 +339,64 @@ import shutil
 
 def sincronizza_foto_wincar(veicolo_id):
     """Sincronizza le foto del veicolo con la cartella locale di WinCar."""
-    db = get_db()
-    veicolo = db.execute('SELECT targa, numero_wincar, drive_folder_id FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
+    # Since this runs in a thread, we must get a fresh connection to the db.
+    with app.app_context():
+        db = get_db()
+        veicolo = db.execute('SELECT targa, numero_wincar, drive_folder_id FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
 
-    if not veicolo or not veicolo['numero_wincar']:
-        return
+        if not veicolo or not veicolo['numero_wincar']:
+            return
 
-    numero_wincar = veicolo['numero_wincar'].strip()
-    targa = veicolo['targa'].strip().upper()
+        numero_wincar = veicolo['numero_wincar'].strip()
+        targa = veicolo['targa'].strip().upper()
 
-    if not numero_wincar:
-        return
+        if not numero_wincar:
+            return
 
-    percorso_foto = f"C:\\WinCar\\Archivi\\Pratiche\\{numero_wincar}\\Pubblici\\Foto"
+        percorso_foto = f"C:\\WinCar\\Archivi\\Pratiche\\{numero_wincar}\\Pubblici\\Foto"
 
-    # Controlla se la cartella WinCar esiste
-    if not os.path.exists(percorso_foto):
-        print(f"[WinCar Sync] Cartella non trovata per pratica {numero_wincar}. Nessuna operazione eseguita.")
-        return
+        # Controlla se la cartella WinCar esiste
+        if not os.path.exists(percorso_foto):
+            print(f"[WinCar Sync] Cartella non trovata per pratica {numero_wincar}. Nessuna operazione eseguita.")
+            return
 
-    print(f"[WinCar Sync] Inizio sincronizzazione per pratica {numero_wincar} in {percorso_foto}...")
-    service = drive_service.get_drive_service()
-    if not service or not veicolo['drive_folder_id']:
-        print("[WinCar Sync] Errore: Servizio Drive non disponibile o cartella drive non associata.")
-        return
+        print(f"[WinCar Sync] Inizio sincronizzazione per pratica {numero_wincar} in {percorso_foto}...")
+        service = drive_service.get_drive_service()
+        if not service or not veicolo['drive_folder_id']:
+            print("[WinCar Sync] Errore: Servizio Drive non disponibile o cartella drive non associata.")
+            return
 
-    try:
-        photos = drive_service.list_photos(service, veicolo['drive_folder_id'])
-        for photo in photos:
-            nome_originale = photo['name']
+        try:
+            photos = drive_service.list_photos(service, veicolo['drive_folder_id'])
+            for photo in photos:
+                photo_id = photo['id']
+                nome_originale = photo['name']
 
-            # Formatta il nome: se inizia già con TARGA_ va bene, altrimenti lo aggiungiamo
-            if nome_originale.upper().startswith(f"{targa}_"):
-                nome_finale = nome_originale
-            else:
-                # Caso generico o rinominato male
-                nome_finale = f"{targa}_{nome_originale}"
+                # Formatta il nome: se inizia già con TARGA_ va bene, altrimenti lo aggiungiamo
+                if nome_originale.upper().startswith(f"{targa}_"):
+                    nome_finale = nome_originale
+                else:
+                    # Caso generico o rinominato male
+                    nome_finale = f"{targa}_{nome_originale}"
 
-            percorso_file_dest = os.path.join(percorso_foto, nome_finale)
+                percorso_file_dest = os.path.join(percorso_foto, nome_finale)
 
-            # Scarica se non esiste o (opzionale) se vogliamo sovrascriverlo sempre
-            # Per evitare richieste inutili a Google Drive, lo scarichiamo solo se manca
-            if not os.path.exists(percorso_file_dest):
-                print(f"[WinCar Sync] Scaricamento {nome_finale}...")
-                drive_service.download_file(service, photo['id'], percorso_file_dest)
-            else:
-                # Il file esiste già, sovrascriverlo? Il task dice "Se un file con quello stesso nome esiste già nel percorso locale, sovrascrivilo (update)."
-                # Visto che i nomi hanno un timestamp (TARGA_DATA_ORA_NUM.jpg) è improbabile avere collisioni a parità di ID/Timestamp,
-                # ma procediamo al download per sicurezza come richiesto.
-                print(f"[WinCar Sync] Sovrascrittura {nome_finale}...")
-                drive_service.download_file(service, photo['id'], percorso_file_dest)
+                # Check if this file has already been synced using the database log
+                log_entry = db.execute('SELECT id FROM wincar_sync_log WHERE file_id = ?', (photo_id,)).fetchone()
 
-        print(f"[WinCar Sync] Completato.")
-    except Exception as e:
-        print(f"[WinCar Sync] Errore durante la sincronizzazione: {e}")
+                if not log_entry:
+                    print(f"[WinCar Sync] Scaricamento {nome_finale} (ID: {photo_id})...")
+                    drive_service.download_file(service, photo_id, percorso_file_dest)
+
+                    # Record the successful download to prevent future downloads
+                    db.execute('INSERT INTO wincar_sync_log (veicolo_id, file_id) VALUES (?, ?)', (veicolo_id, photo_id))
+                    db.commit()
+                else:
+                    print(f"[WinCar Sync] File {nome_finale} (ID: {photo_id}) già scaricato in precedenza. Salto.")
+
+            print(f"[WinCar Sync] Completato.")
+        except Exception as e:
+            print(f"[WinCar Sync] Errore durante la sincronizzazione: {e}")
 
 def format_drive_folder_name(v):
     return f"{v['targa']} {v['marca'] or ''} {v['modello'] or ''} {v['anno'] or ''}".strip().upper()
