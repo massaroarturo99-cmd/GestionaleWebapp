@@ -16,29 +16,15 @@
     </div>
     {% endif %}
 
-    <form method="POST" action="/veicolo/nuovo" id="veicoloForm">
+    <form method="POST" action="/veicolo/nuovo">
         <input type="hidden" id="temp_file_ids" name="temp_file_ids" value="">
-
-            {% if not veicolo %}
-            <div id="veicoloWarningBanner" class="hidden bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 shadow-sm">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 text-yellow-500">
-                        <i class="fas fa-exclamation-triangle fa-2x"></i>
-                    </div>
-                    <div class="ml-3" id="veicoloWarningText">
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
             <!-- SEZIONE 1: Dati Base -->
             <div class="bg-gray-50 p-4 rounded-lg mb-6 border">
                 <h4 class="font-bold text-gray-700 mb-4 text-sm uppercase"><i class="fas fa-car"></i> Veicolo e Cliente</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Targa *</label>
-                        <input required id="inputTarga" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 font-mono font-bold uppercase focus:outline-none focus:ring-1 focus:ring-blue-500" name="targa" type="text" placeholder="AB123CD">
-                        <div id="targaInfo" class="text-xs text-green-600 mt-1 hidden font-semibold"></div>
+                        <input required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 font-mono font-bold uppercase focus:outline-none focus:ring-1 focus:ring-blue-500" name="targa" type="text" placeholder="AB123CD">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Marca</label>
@@ -86,15 +72,15 @@
                             <option value="Volkswagen">
                             <option value="Volvo">
                         </datalist>
-                        <input id="inputMarca" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="marca" type="text" list="brands" value="{{ veicolo.marca or '' }}">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="marca" type="text" list="brands" value="{{ veicolo.marca or '' }}">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
-                        <input id="inputModello" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="modello" type="text" value="{{ veicolo.modello or '' }}">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="modello" type="text" value="{{ veicolo.modello or '' }}">
                     </div>
                     <div>
                         <label class="block text-gray-700 text-xs font-bold mb-1">Anno</label>
-                        <input id="inputAnno" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="anno" type="text" value="{{ veicolo.anno or '' }}">
+                        <input class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" name="anno" type="text" value="{{ veicolo.anno or '' }}">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-gray-700 text-xs font-bold mb-1">Proprietario / Cliente</label>
@@ -460,65 +446,6 @@
         if (tempIds) {
             document.getElementById('temp_file_ids').value = tempIds;
         }
-
-        // Targa Verification & Autofill Logic
-        {% if not veicolo %}
-        const inputTarga = document.getElementById('inputTarga');
-        const targaInfo = document.getElementById('targaInfo');
-        const inputMarca = document.getElementById('inputMarca');
-        const inputModello = document.getElementById('inputModello');
-        const inputAnno = document.getElementById('inputAnno');
-        const selectCliente = document.getElementById('cliente_select');
-        const warningBanner = document.getElementById('veicoloWarningBanner');
-        const warningText = document.getElementById('veicoloWarningText');
-
-        let debounceTimer;
-
-        inputTarga.addEventListener('input', function() {
-            clearTimeout(debounceTimer);
-            const targa = this.value.trim().toUpperCase();
-
-            // Basic italian plate validation (just length for early return)
-            if (targa.length < 5) {
-                targaInfo.classList.add('hidden');
-                warningBanner.classList.add('hidden');
-                return;
-            }
-
-            debounceTimer = setTimeout(() => {
-                fetch(`/api/verifica_vettura/${targa}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.esiste) {
-                            // Show info
-                            targaInfo.textContent = `Vettura già nota. Ultimo ingresso: ${data.ultima_data}`;
-                            targaInfo.classList.remove('hidden');
-
-                            // Autofill if currently empty
-                            if (!inputMarca.value) inputMarca.value = data.dati_veicolo.marca || '';
-                            if (!inputModello.value) inputModello.value = data.dati_veicolo.modello || '';
-                            if (!inputAnno.value) inputAnno.value = data.dati_veicolo.anno || '';
-                            if (data.dati_veicolo.cliente_id && !selectCliente.value) {
-                                selectCliente.value = data.dati_veicolo.cliente_id;
-                            }
-
-                            // Show suspension warning if applicable
-                            if (data.sospeso) {
-                                warningText.innerHTML = `<h3 class="text-sm font-bold text-yellow-800">Attenzione: Sospeso Finanziario</h3>
-                                                         <div class="mt-1 text-sm text-yellow-700">Risulta un saldo pendente di <strong>€${data.sospeso.restante.toFixed(2)}</strong> relativo alla pratica del ${data.sospeso.data_sospeso}.</div>`;
-                                warningBanner.classList.remove('hidden');
-                            } else {
-                                warningBanner.classList.add('hidden');
-                            }
-                        } else {
-                            targaInfo.classList.add('hidden');
-                            warningBanner.classList.add('hidden');
-                        }
-                    })
-                    .catch(err => console.error("Error verifying targa:", err));
-            }, 500); // 500ms debounce
-        });
-        {% endif %}
     });
 
     // Chiudi il dropdown di stampa cliccando fuori

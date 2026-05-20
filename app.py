@@ -37,7 +37,7 @@ def init_db():
         db.execute('''
             CREATE TABLE IF NOT EXISTS veicoli (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                targa TEXT NOT NULL UNIQUE,
+                targa TEXT NOT NULL,
                 marca TEXT,
                 modello TEXT,
                 anno TEXT,
@@ -158,6 +158,51 @@ def init_db():
 
 def migrate_db():
     db = get_db()
+
+    # Migrate veicoli to remove UNIQUE constraint on targa
+    # Check if the UNIQUE constraint exists. We can do this by trying to insert a duplicate,
+    # but a cleaner way is just to see if we've already run this migration.
+    # We can check the schema or check if a table pragma allows it. SQLite pragma table_info doesn't show UNIQUE.
+    # So we'll check if a duplicate insert fails. But wait, it's safer to always ensure the table has the right schema.
+    # Let's check the sqlite_master for the exact CREATE TABLE statement.
+    veicoli_schema = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='veicoli'").fetchone()
+    if veicoli_schema and 'UNIQUE' in veicoli_schema['sql']:
+        # We need to migrate
+        db.execute('PRAGMA foreign_keys=off;')
+        db.execute('''
+            CREATE TABLE veicoli_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                targa TEXT NOT NULL,
+                marca TEXT,
+                modello TEXT,
+                anno TEXT,
+                cliente_id INTEGER,
+                stato TEXT DEFAULT 'PREVENTIVO',
+                data_arrivo DATE,
+                data_consegna_prevista DATE,
+                lavorazioni_sostituzione TEXT,
+                lavorazioni_ripristino TEXT,
+                totale REAL DEFAULT 0.0,
+                manodopera REAL DEFAULT 0.0,
+                costo_ricambi REAL DEFAULT 0.0,
+                acconto REAL DEFAULT 0.0,
+                riconsegnata BOOLEAN DEFAULT 0,
+                drive_folder_id TEXT,
+                controparte_nome TEXT,
+                controparte_telefono TEXT,
+                numero_wincar TEXT,
+                FOREIGN KEY (cliente_id) REFERENCES clienti (id)
+            )
+        ''')
+        # Handle columns correctly based on existing schema. Some columns might be missing if older migrations haven't run.
+        # It's better to fetch existing columns.
+        cols = [row['name'] for row in db.execute("PRAGMA table_info(veicoli)").fetchall()]
+        cols_str = ', '.join(cols)
+        db.execute(f'INSERT INTO veicoli_new ({cols_str}) SELECT {cols_str} FROM veicoli')
+        db.execute('DROP TABLE veicoli')
+        db.execute('ALTER TABLE veicoli_new RENAME TO veicoli')
+        db.execute('PRAGMA foreign_keys=on;')
+        db.commit()
 
     try:
         db.execute("SELECT id FROM wincar_sync_log LIMIT 1")
@@ -579,6 +624,46 @@ def home():
                            veicoli_presenti=veicoli_presenti,
                            veicoli_attivi=veicoli_attivi)
 
+@app.route('/api/verifica_vettura/<string:targa>')
+def verifica_vettura(targa):
+    db = get_db()
+    targa_clean = targa.strip().upper()
+
+    veicoli_storico = db.execute('''
+        SELECT * FROM veicoli
+        WHERE targa = ?
+        ORDER BY data_arrivo DESC, id DESC
+    ''', (targa_clean,)).fetchall()
+
+    if not veicoli_storico:
+        return jsonify({"esiste": False})
+
+    ultimo_veicolo = veicoli_storico[0]
+
+    sospeso_trovato = False
+    sospeso_dati = {}
+
+    for v in veicoli_storico:
+        if v['totale'] > v['acconto']:
+            sospeso_trovato = True
+            sospeso_dati = {
+                "restante": round(v['totale'] - v['acconto'], 2),
+                "data_sospeso": v['data_arrivo'] or "N/D"
+            }
+            break
+
+    return jsonify({
+        "esiste": True,
+        "ultima_data": ultimo_veicolo['data_arrivo'] or "N/D",
+        "dati_veicolo": {
+            "marca": ultimo_veicolo['marca'] or "",
+            "modello": ultimo_veicolo['modello'] or "",
+            "anno": ultimo_veicolo['anno'] or "",
+            "cliente_id": ultimo_veicolo['cliente_id'] or ""
+        },
+        "sospeso": sospeso_dati if sospeso_trovato else False
+    })
+
 @app.route('/api/upload_temp', methods=['POST'])
 def upload_temp_photos():
     files = request.files.getlist('foto')
@@ -866,10 +951,10 @@ def veicolo_nuovo():
             threading.Thread(target=sincronizza_foto_wincar, args=(nuovo_veicolo_id,)).start()
 
             return redirect(url_for('veicolo_detail', id=nuovo_veicolo_id, from_new=1))
-        except sqlite3.IntegrityError:
+        except sqlite3.IntegrityError as e:
             db.rollback()
             clienti = db.execute('SELECT * FROM clienti ORDER BY nome').fetchall()
-            return render_template('veicolo_form.html', error="Targa già presente!", clienti=clienti)
+            return render_template('veicolo_form.html', error=f"Errore di integrità database: {str(e)}", clienti=clienti)
 
     clienti = db.execute('SELECT * FROM clienti ORDER BY nome').fetchall()
     return render_template('veicolo_form.html', clienti=clienti, veicolo=None)
