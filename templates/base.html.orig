@@ -212,7 +212,7 @@
     <div x-data="{
             openModalPreventivoRapido: false,
             clienti: [],
-            formPreventivo: { targa: '', marca: '', modello: '', cliente_id: '', telefono: '', note_lavori: '', data_ora: '' },
+            formPreventivo: { targa: '', cliente_id: '', telefono: '', note_lavori: '', data_ora: '' },
             isSaving: false,
             targaInfo: '',
             sospesoBanner: null,
@@ -243,12 +243,6 @@
                                 if (!this.formPreventivo.cliente_id && data.dati_veicolo.cliente_id) {
                                     this.formPreventivo.cliente_id = data.dati_veicolo.cliente_id;
                                     this.updateTelefono();
-                                }
-                                if (!this.formPreventivo.marca && data.dati_veicolo.marca) {
-                                    this.formPreventivo.marca = data.dati_veicolo.marca;
-                                }
-                                if (!this.formPreventivo.modello && data.dati_veicolo.modello) {
-                                    this.formPreventivo.modello = data.dati_veicolo.modello;
                                 }
                                 if (data.sospeso) {
                                     this.sospesoBanner = data.sospeso;
@@ -322,16 +316,6 @@
                         <label class="block text-gray-700 text-xs font-bold mb-1">Targa *</label>
                         <input x-model="formPreventivo.targa" @input="checkTarga()" required class="appearance-none border rounded w-full py-2 px-3 text-gray-700 font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="AB123CD">
                         <div x-show="targaInfo" x-text="targaInfo" class="text-xs text-green-600 mt-1 font-semibold" style="display:none;"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-gray-700 text-xs font-bold mb-1">Marca</label>
-                            <input x-model="formPreventivo.marca" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="Es. Fiat">
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
-                            <input x-model="formPreventivo.modello" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="Es. Panda">
-                        </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>

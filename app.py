@@ -1306,6 +1306,42 @@ def api_cliente_rapido():
         'telefono': telefono
     })
 
+@app.route('/api/clienti', methods=['GET'])
+def api_clienti_list():
+    db = get_db()
+    clienti = db.execute('SELECT id, nome, telefono FROM clienti ORDER BY nome').fetchall()
+    return jsonify([dict(c) for c in clienti])
+
+@app.route('/api/preventivo_rapido', methods=['POST'])
+def api_preventivo_rapido():
+    db = get_db()
+    data = request.json or {}
+
+    targa = (data.get('targa') or '').upper().strip()
+    cliente_id = data.get('cliente_id')
+    telefono = data.get('telefono')
+    note_lavori = data.get('note_lavori')
+    data_ora = data.get('data_ora')
+    marca = (data.get('marca') or '').upper()
+    modello = (data.get('modello') or '').upper()
+
+    if not targa:
+        return jsonify({'success': False, 'error': 'Targa obbligatoria'}), 400
+
+    if cliente_id and telefono:
+        db.execute('UPDATE clienti SET telefono = ? WHERE id = ?', (telefono, cliente_id))
+
+    cursor = db.execute('''
+        INSERT INTO veicoli (targa, marca, modello, cliente_id, note_lavori, data_arrivo, stato)
+        VALUES (?, ?, ?, ?, ?, ?, 'PREVENTIVO')
+    ''', (targa, marca, modello, cliente_id, note_lavori, data_ora))
+
+    nuovo_id = cursor.lastrowid
+    sync_agenda_veicolo(db, nuovo_id)
+    db.commit()
+
+    return jsonify({'success': True, 'id': nuovo_id})
+
 @app.route('/cliente/<int:id>/aggiorna', methods=['POST'])
 def cliente_aggiorna(id):
     db = get_db()
