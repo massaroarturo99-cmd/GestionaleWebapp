@@ -154,19 +154,6 @@ def init_db():
                 ultimo_prezzo REAL DEFAULT 0.0
             )
         ''')
-
-        db.execute('''
-            CREATE TABLE IF NOT EXISTS agenda (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                veicolo_id INTEGER,
-                titolo TEXT NOT NULL,
-                data_ora DATETIME NOT NULL,
-                tipo_impegno TEXT NOT NULL,
-                note TEXT,
-                FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
-            )
-        ''')
-
         db.commit()
 
 def migrate_db():
@@ -384,22 +371,6 @@ def migrate_db():
                 ultimo_prezzo REAL DEFAULT 0.0
             )
         ''')
-
-    try:
-        db.execute("SELECT id FROM agenda LIMIT 1")
-    except sqlite3.OperationalError:
-        db.execute('''
-            CREATE TABLE IF NOT EXISTS agenda (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                veicolo_id INTEGER,
-                titolo TEXT NOT NULL,
-                data_ora DATETIME NOT NULL,
-                tipo_impegno TEXT NOT NULL,
-                note TEXT,
-                FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
-            )
-        ''')
-        db.commit()
         db.commit()
 
 if not os.path.exists(app.config['DATABASE']):
