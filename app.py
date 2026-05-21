@@ -624,6 +624,41 @@ def home():
                            veicoli_presenti=veicoli_presenti,
                            veicoli_attivi=veicoli_attivi)
 
+@app.route('/agenda')
+def agenda_list():
+    db = get_db()
+
+    # Filtri opzionali via query param
+    mese = request.args.get('mese')
+    anno = request.args.get('anno')
+
+    query = '''
+        SELECT a.id, a.veicolo_id, a.titolo, a.data_ora, a.tipo_impegno, a.note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+        FROM agenda a
+        JOIN veicoli v ON a.veicolo_id = v.id
+        LEFT JOIN clienti c ON v.cliente_id = c.id
+        WHERE 1=1
+    '''
+    params = []
+
+    if mese and anno:
+        query += " AND strftime('%m', a.data_ora) = ? AND strftime('%Y', a.data_ora) = ?"
+        params.extend([mese.zfill(2), anno])
+    else:
+        # Default: mostra da 7 giorni fa in avanti per non perdere eventi recenti o in corso
+        query += " AND date(a.data_ora) >= date('now', '-7 days')"
+
+    query += " ORDER BY a.data_ora ASC"
+
+    appuntamenti = db.execute(query, params).fetchall()
+
+    return render_template('agenda.html',
+                           appuntamenti=appuntamenti,
+                           mese_corrente=mese,
+                           anno_corrente=anno)
+
 @app.route('/api/verifica_vettura/<string:targa>')
 def verifica_vettura(targa):
     db = get_db()
