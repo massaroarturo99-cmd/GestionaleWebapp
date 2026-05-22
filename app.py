@@ -475,6 +475,38 @@ def sincronizza_foto_wincar(veicolo_id):
 def format_drive_folder_name(v):
     return f"{v['targa']} {v['marca'] or ''} {v['modello'] or ''} {v['anno'] or ''}".strip().upper()
 
+def sync_agenda_veicolo(db, veicolo_id):
+    """Aggiorna automaticamente la tabella agenda in base a data_arrivo e data_consegna_prevista."""
+    v = db.execute('SELECT * FROM veicoli WHERE id = ?', (veicolo_id,)).fetchone()
+    if not v:
+        return
+
+    v_dict = dict(v)
+    note_lavori = v_dict.get('note_lavori', '')
+
+    # Rimuovi vecchi impegni automatici
+    db.execute('''
+        DELETE FROM agenda
+        WHERE veicolo_id = ? AND tipo_impegno IN ('Ingresso', 'Uscita')
+    ''', (veicolo_id,))
+
+    nome_veicolo = f"{v['targa']} {v['marca'] or ''} {v['modello'] or ''}".strip()
+
+    if v['data_arrivo']:
+        data_ora = v['data_arrivo'] if 'T' in v['data_arrivo'] else f"{v['data_arrivo']}T08:30"
+        db.execute('''
+            INSERT INTO agenda (veicolo_id, titolo, data_ora, tipo_impegno, note)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (veicolo_id, f"Ingresso: {nome_veicolo}", data_ora, 'Ingresso', note_lavori))
+
+    if v['data_consegna_prevista']:
+        data_ora_uscita = v['data_consegna_prevista'] if 'T' in v['data_consegna_prevista'] else f"{v['data_consegna_prevista']}T18:00"
+        db.execute('''
+            INSERT INTO agenda (veicolo_id, titolo, data_ora, tipo_impegno, note)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (veicolo_id, f"Riconsegna: {nome_veicolo}", data_ora_uscita, 'Uscita', 'Riconsegna prevista'))
+
+
 def sync_db_to_drive(veicolo_id=None):
     def _sync():
         service = drive_service.get_drive_service()
