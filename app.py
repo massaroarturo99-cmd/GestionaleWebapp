@@ -677,13 +677,40 @@ def home():
 
     veicoli_attivi = db.execute("SELECT id, targa, marca, modello FROM veicoli WHERE riconsegnata = 0 ORDER BY targa ASC").fetchall()
 
+    prossimi_appuntamenti = db.execute('''
+        SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
+               targa, marca, modello, stato, cliente_nome, debito_totale
+        FROM (
+            SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno, a.note as note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+            FROM agenda a
+            JOIN veicoli v ON a.veicolo_id = v.id
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+
+            UNION ALL
+
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+            FROM veicoli v
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+            WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
+            AND NOT EXISTS (SELECT 1 FROM agenda WHERE veicolo_id = v.id AND tipo_impegno = 'Uscita')
+        )
+        WHERE date(data_ora) >= date('now')
+        ORDER BY data_ora ASC
+        LIMIT 10
+    ''').fetchall()
+
     return render_template('home.html',
                            totale_veicoli=totale_veicoli,
                            veicoli_sospesi=veicoli_sospesi,
                            preventivi=preventivi,
                            lavorazioni_attive=lavorazioni_attive,
                            veicoli_presenti=veicoli_presenti,
-                           veicoli_attivi=veicoli_attivi)
+                           veicoli_attivi=veicoli_attivi,
+                           prossimi_appuntamenti=prossimi_appuntamenti)
 
 @app.route('/agenda')
 def agenda_list():
@@ -693,25 +720,47 @@ def agenda_list():
     mese = request.args.get('mese')
     anno = request.args.get('anno')
 
-    query = '''
-        SELECT a.id, a.veicolo_id, a.titolo, a.data_ora, a.tipo_impegno, a.note,
+    query = """
+        SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
+               targa, marca, modello, stato, cliente_nome, debito_totale
+        FROM (
+            SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno, a.note as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
-        FROM agenda a
-        JOIN veicoli v ON a.veicolo_id = v.id
-        LEFT JOIN clienti c ON v.cliente_id = c.id
+            FROM agenda a
+            JOIN veicoli v ON a.veicolo_id = v.id
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+
+            UNION ALL
+
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+            FROM veicoli v
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+            WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
+            AND NOT EXISTS (SELECT 1 FROM agenda WHERE veicolo_id = v.id AND tipo_impegno = 'Uscita')
+        )
         WHERE 1=1
-    '''
+    """
     params = []
 
     if mese and anno:
-        query += " AND strftime('%m', a.data_ora) = ? AND strftime('%Y', a.data_ora) = ?"
+        query += " AND strftime('%m', data_ora) = ? AND strftime('%Y', data_ora) = ?"
         params.extend([mese.zfill(2), anno])
     else:
-        # Default: mostra da 7 giorni fa in avanti per non perdere eventi recenti o in corso
-        query += " AND date(a.data_ora) >= date('now', '-7 days')"
+        query += " AND date(data_ora) >= date('now', '-7 days')"
 
-    query += " ORDER BY a.data_ora ASC"
+    query += " ORDER BY data_ora ASC"
+
+    # Aggiungiamo anche le consegne stimate (veicoli attivi) che magari non sono ancora state salvate e passate per l'autosync agenda.
+    # Lo facciamo via UNION ALL o codice Python. (Avendo aggiunto l'autosync agenda in app.py, *tutti* i veicoli con date avranno una riga in agenda).
+    # Ma per assicurarci di vederli, li uniamo. Siccome avevamo già scriptato l'autosync su tutti i veicoli per fixarlo, la query agenda DOVREBBE bastare.
+    # Se il cliente lamenta che mancano, lo ha detto prima che lo fixassimo (vedi mio commento sopra).
+    # Per sicurezza e soddisfare il prompt: "deve pescare sia dalla tabella agenda che dalla tabella veicoli" e "restituire come unica lista":
+
+    # In realta, siccome l'autosync aggiorna GIA la tabella agenda da veicoli, se ci sono veicoli con date, SONO in agenda.
+    # Lasciamo quindi il fetch cosi. (Eventualmente possiamo rifarlo eseguendo il sync massivo una volta in background on request).
 
     appuntamenti = db.execute(query, params).fetchall()
 
@@ -2107,6 +2156,71 @@ def bolla_riga_elimina(id):
         return redirect(url_for('bolla_detail', id=riga['bolla_id']))
     return redirect(url_for('fornitori_list'))
 
+
+
+@app.route('/api/agenda')
+def api_agenda():
+    db = get_db()
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+
+    query = '''
+        SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
+               targa, marca, modello, stato, cliente_nome, debito_totale
+        FROM (
+            SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno, a.note as note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+            FROM agenda a
+            JOIN veicoli v ON a.veicolo_id = v.id
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+
+            UNION ALL
+
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+            FROM veicoli v
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+            WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
+            AND NOT EXISTS (SELECT 1 FROM agenda WHERE veicolo_id = v.id AND tipo_impegno = 'Uscita')
+        )
+        WHERE 1=1
+    '''
+    params = []
+
+    if start_date:
+        query += " AND date(data_ora) >= date(?)"
+        params.append(start_date[:10])
+    if end_date:
+        query += " AND date(data_ora) <= date(?)"
+        params.append(end_date[:10])
+
+    query += " ORDER BY data_ora ASC"
+
+    rows = db.execute(query, params).fetchall()
+
+    events = []
+    for r in rows:
+        color = '#3b82f6' if r['tipo_impegno'] == 'Ingresso' else '#22c55e'
+        events.append({
+            'id': r['id'],
+            'title': f"{r['targa']} - {r['tipo_impegno']}",
+            'start': r['data_ora'],
+            'color': color,
+            'extendedProps': {
+                'veicolo_id': r['veicolo_id'],
+                'targa': r['targa'],
+                'marca': r['marca'],
+                'modello': r['modello'],
+                'stato': r['stato'],
+                'cliente': r['cliente_nome'],
+                'note': r['note'],
+                'debito': r['debito_totale']
+            }
+        })
+
+    return jsonify(events)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

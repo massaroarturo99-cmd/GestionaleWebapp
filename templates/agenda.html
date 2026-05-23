@@ -21,71 +21,32 @@
 
     <!-- Lista Appuntamenti -->
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
-        {% if appuntamenti %}
-            <div class="divide-y divide-gray-100">
-                {% for appt in appuntamenti %}
-                <a href="/veicolo/{{ appt.veicolo_id }}"
-                   x-show="filter === 'tutti' || filter === '{{ appt.tipo_impegno }}'"
-                   x-transition
-                   class="block p-4 hover:bg-gray-50 transition-colors relative group">
-
-                    <div class="absolute left-0 top-0 bottom-0 w-1 {% if appt.tipo_impegno == 'Ingresso' %}bg-blue-500{% else %}bg-green-500{% endif %}"></div>
-
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-shrink-0 {% if appt.tipo_impegno == 'Ingresso' %}bg-blue-100 text-blue-600{% else %}bg-green-100 text-green-600{% endif %} w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-sm">
-                                <i class="fas {% if appt.tipo_impegno == 'Ingresso' %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
-                            </div>
-
-                            <div>
-                                <div class="flex items-center space-x-2">
-                                    <h4 class="font-bold text-gray-800 text-lg">{{ appt.targa }}</h4>
-                                    <span class="text-sm font-medium text-gray-600 border px-2 py-0.5 rounded bg-gray-50">{{ appt.marca }} {{ appt.modello }}</span>
-                                    {% if appt.debito_totale and appt.debito_totale > 0 %}
-                                    <span class="text-red-500 group-hover:text-red-600 transition-colors cursor-help ml-1" title="Attenzione: Sospeso di € {{ '%.2f'|format(appt.debito_totale) }}">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </span>
-                                    {% endif %}
-                                </div>
-                                <p class="text-sm text-gray-500 mt-1">
-                                    <span class="font-semibold text-gray-700"><i class="far fa-clock"></i> {{ appt.data_ora.replace('T', ' ')[:16] }}</span>
-                                    &bull; <span class="{% if appt.tipo_impegno == 'Ingresso' %}text-blue-600{% else %}text-green-600{% endif %} font-medium">{{ appt.tipo_impegno }}</span>
-                                    {% if appt.cliente_nome %}
-                                    &bull; <i class="far fa-user text-gray-400"></i> {{ appt.cliente_nome }}
-                                    {% endif %}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end sm:justify-start gap-3 pl-16 sm:pl-0">
-                            {% if appt.note %}
-                            <div class="text-xs text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg max-w-xs truncate" title="{{ appt.note }}">
-                                <i class="fas fa-sticky-note mr-1 text-gray-400"></i> {{ appt.note }}
-                            </div>
-                            {% endif %}
-                            <div class="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-600 border border-gray-200 uppercase">
-                                {{ appt.stato }}
-                            </div>
-                            <div class="text-gray-400 group-hover:text-blue-500 transition-colors">
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="p-12 text-center flex flex-col items-center justify-center">
-                <div class="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mb-4">
-                    <i class="fas fa-calendar-times text-3xl text-gray-400"></i>
-                </div>
-                <h3 class="text-lg font-bold text-gray-700 mb-1">Agenda Vuota</h3>
-                <p class="text-gray-500">Non ci sono appuntamenti registrati nel periodo selezionato.</p>
-                <button @click="$dispatch('open-preventivo-rapido')" class="mt-6 text-blue-600 font-semibold hover:underline">
-                    <i class="fas fa-plus-circle mr-1"></i> Crea nuovo preventivo rapido
-                </button>
-            </div>
-        {% endif %}
+        <div id="calendar" class="p-4"></div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/it.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'it',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            events: '/api/agenda',
+            eventClick: function(info) {
+                window.location.href = '/veicolo/' + info.event.extendedProps.veicolo_id;
+            }
+        });
+        calendar.render();
+    });
+</script>
 {% endblock %}
