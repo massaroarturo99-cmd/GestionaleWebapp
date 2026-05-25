@@ -685,7 +685,7 @@ def home():
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM agenda a
-            JOIN veicoli v ON a.veicolo_id = v.id
+            LEFT JOIN veicoli v ON a.veicolo_id = v.id
             LEFT JOIN clienti c ON v.cliente_id = c.id
 
             UNION ALL
@@ -2168,16 +2168,17 @@ def api_agenda():
         SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
                targa, marca, modello, stato, cliente_nome, debito_totale
         FROM (
-            SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno, a.note as note,
+            SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno,
+               COALESCE(v.note_lavori, a.note) as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM agenda a
-            JOIN veicoli v ON a.veicolo_id = v.id
+            LEFT JOIN veicoli v ON a.veicolo_id = v.id
             LEFT JOIN clienti c ON v.cliente_id = c.id
 
             UNION ALL
 
-            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM veicoli v
@@ -2203,9 +2204,15 @@ def api_agenda():
     events = []
     for r in rows:
         color = '#3b82f6' if r['tipo_impegno'] == 'Ingresso' else '#22c55e'
+        if r['veicolo_id'] is None:
+            color = '#8b5cf6' # Purple for generic
+            title = r['titolo']
+        else:
+            title = f"{r['targa']} - {r['tipo_impegno']}"
+
         events.append({
             'id': r['id'],
-            'title': f"{r['targa']} - {r['tipo_impegno']}",
+            'title': title,
             'start': r['data_ora'],
             'color': color,
             'extendedProps': {
@@ -2221,6 +2228,43 @@ def api_agenda():
         })
 
     return jsonify(events)
+
+
+@app.route('/api/agenda/nuovo', methods=['POST'])
+def api_agenda_nuovo():
+    db = get_db()
+    data = request.json or {}
+
+    titolo = data.get('titolo')
+    data_ora = data.get('data_ora')
+    tipo_impegno = data.get('tipo_impegno', 'Scadenza')
+    note = data.get('note', '')
+
+    if not titolo or not data_ora:
+        return jsonify({'success': False, 'error': 'Dati mancanti'}), 400
+
+    db.execute('''
+        INSERT INTO agenda (titolo, data_ora, tipo_impegno, note)
+        VALUES (?, ?, ?, ?)
+    ''', (titolo, data_ora, tipo_impegno, note))
+    db.commit()
+
+    return jsonify({'success': True})
+
+@app.route('/api/agenda/<id>/note', methods=['POST'])
+def api_agenda_note(id):
+    db = get_db()
+    data = request.json or {}
+    note = data.get('note', '')
+    veicolo_id = data.get('veicolo_id')
+
+    if veicolo_id:
+        db.execute('UPDATE veicoli SET note_lavori = ? WHERE id = ?', (note, veicolo_id))
+    else:
+        db.execute('UPDATE agenda SET note = ? WHERE id = ?', (note, id))
+
+    db.commit()
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
