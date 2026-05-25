@@ -3,6 +3,11 @@
 {% block header_title %}Agenda Officina{% endblock %}
 
 {% block content %}
+<!-- Aggiungiamo i CDN di FullCalendar qui dentro -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/it.js'></script>
+
 <div x-data="{ filter: 'tutti' }" class="max-w-5xl mx-auto space-y-6">
 
     <!-- Header e Filtri -->
@@ -11,25 +16,15 @@
             <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-calendar-check text-blue-500 mr-2"></i> Calendario Ingressi e Uscite</h2>
             <p class="text-sm text-gray-500 mt-1">Gestione programmata dei veicoli in officina.</p>
         </div>
-
-        <div class="inline-flex bg-gray-100 rounded-lg p-1">
-            <button @click="filter = 'tutti'" :class="filter === 'tutti' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors">Tutti</button>
-            <button @click="filter = 'Ingresso'" :class="filter === 'Ingresso' ? 'bg-blue-500 shadow text-white' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors"><i class="fas fa-arrow-right mr-1"></i> Ingressi</button>
-            <button @click="filter = 'Uscita'" :class="filter === 'Uscita' ? 'bg-green-500 shadow text-white' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-md text-sm font-medium transition-colors"><i class="fas fa-arrow-left mr-1"></i> Uscite</button>
-        </div>
     </div>
 
     <!-- Lista Appuntamenti -->
     <div class="bg-white rounded-xl shadow-md overflow-hidden">
-        <div id="calendar" class="p-4"></div>
+        <!-- Altezza minima per evitare che collassi -->
+        <div id="calendar" class="p-4" style="min-height: 700px;"></div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/it.js'></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
