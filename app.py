@@ -2273,5 +2273,24 @@ def api_agenda_note(id):
     db.commit()
     return jsonify({'success': True})
 
+
+@app.route('/api/agenda/<id>/elimina', methods=['POST'])
+def api_agenda_elimina(id):
+    db = get_db()
+    data = request.json or {}
+    veicolo_id = data.get('veicolo_id')
+
+    if veicolo_id:
+        # È un veicolo. Svuota data_consegna_prevista, ma NON eliminare il veicolo.
+        db.execute('UPDATE veicoli SET data_consegna_prevista = NULL, note_lavori = NULL WHERE id = ?', (veicolo_id,))
+        # Rimuovi l'impegno di uscita autogenerato (se presente)
+        db.execute('DELETE FROM agenda WHERE veicolo_id = ? AND tipo_impegno = "Uscita"', (veicolo_id,))
+    else:
+        # È un impegno generico in agenda
+        db.execute('DELETE FROM agenda WHERE id = ?', (id,))
+
+    db.commit()
+    return jsonify({'success': True})
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
