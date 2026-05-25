@@ -164,6 +164,7 @@ def init_db():
                 data_ora DATETIME NOT NULL,
                 tipo_impegno TEXT NOT NULL,
                 note TEXT,
+                completato INTEGER DEFAULT 0,
                 FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
             )
         ''')
@@ -221,6 +222,11 @@ def migrate_db():
 
     try:
         db.execute("ALTER TABLE veicoli ADD COLUMN note_lavori TEXT;")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        db.execute("ALTER TABLE agenda ADD COLUMN completato INTEGER DEFAULT 0;")
     except sqlite3.OperationalError:
         pass
 
@@ -403,6 +409,7 @@ def migrate_db():
                 data_ora DATETIME NOT NULL,
                 tipo_impegno TEXT NOT NULL,
                 note TEXT,
+                completato INTEGER DEFAULT 0,
                 FOREIGN KEY (veicolo_id) REFERENCES veicoli (id)
             )
         ''')
@@ -2172,11 +2179,11 @@ def api_agenda():
     end_date = request.args.get('end')
 
     query = '''
-        SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
+        SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note, completato,
                targa, marca, modello, stato, cliente_nome, debito_totale
         FROM (
             SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno,
-               a.note as note,
+               a.note as note, COALESCE(a.completato, 0) as completato,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM agenda a
@@ -2186,6 +2193,7 @@ def api_agenda():
             UNION ALL
 
             SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
+               0 as completato,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM veicoli v
@@ -2223,6 +2231,7 @@ def api_agenda():
             'start': r['data_ora'],
             'color': color,
             'extendedProps': {
+                'completato': bool(r['completato']),
                 'veicolo_id': r['veicolo_id'],
                 'targa': r['targa'],
                 'marca': r['marca'],
@@ -2264,11 +2273,16 @@ def api_agenda_note(id):
     data = request.json or {}
     note = data.get('note', '')
     veicolo_id = data.get('veicolo_id')
+    completato = 1 if data.get('completato') else 0
 
     if veicolo_id:
         db.execute('UPDATE veicoli SET note_lavori = ? WHERE id = ?', (note, veicolo_id))
+        # Aggiorniamo anche completato sull'agenda se l'impegno era autogenerato ma modificato
+        # In questo caso però, l'id agenda potrebbe essere un ID vero se l'evento Ingresso/Uscita esiste
+        if int(id) > 0:
+            db.execute('UPDATE agenda SET note = ?, completato = ? WHERE id = ?', (note, completato, id))
     else:
-        db.execute('UPDATE agenda SET note = ? WHERE id = ?', (note, id))
+        db.execute('UPDATE agenda SET note = ?, completato = ? WHERE id = ?', (note, completato, id))
 
     db.commit()
     return jsonify({'success': True})
