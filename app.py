@@ -56,6 +56,7 @@ def init_db():
                 controparte_nome TEXT,
                 controparte_telefono TEXT,
                 numero_wincar TEXT,
+                note_lavori TEXT,
                 FOREIGN KEY (cliente_id) REFERENCES clienti (id)
             )
         ''')
@@ -204,6 +205,7 @@ def migrate_db():
                 controparte_nome TEXT,
                 controparte_telefono TEXT,
                 numero_wincar TEXT,
+                note_lavori TEXT,
                 FOREIGN KEY (cliente_id) REFERENCES clienti (id)
             )
         ''')
@@ -216,6 +218,11 @@ def migrate_db():
         db.execute('ALTER TABLE veicoli_new RENAME TO veicoli')
         db.execute('PRAGMA foreign_keys=on;')
         db.commit()
+
+    try:
+        db.execute("ALTER TABLE veicoli ADD COLUMN note_lavori TEXT;")
+    except sqlite3.OperationalError:
+        pass
 
     try:
         db.execute("SELECT id FROM wincar_sync_log LIMIT 1")
@@ -690,7 +697,7 @@ def home():
 
             UNION ALL
 
-            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM veicoli v
@@ -733,7 +740,7 @@ def agenda_list():
 
             UNION ALL
 
-            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, '' as note,
+            SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM veicoli v
@@ -2169,7 +2176,7 @@ def api_agenda():
                targa, marca, modello, stato, cliente_nome, debito_totale
         FROM (
             SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno,
-               COALESCE(v.note_lavori, a.note) as note,
+               a.note as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
                (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
             FROM agenda a
