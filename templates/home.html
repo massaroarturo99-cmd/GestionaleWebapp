@@ -132,7 +132,7 @@
                             <i class="fas fa-exclamation-triangle fa-lg"></i>
                         </div>
                         {% endif %}
-                        {% if appt.veicolo_id and not appt.totale %}
+                        {% if appt.veicolo_id and (appt.totale is none or appt.totale == '' or appt.totale|float == 0.0) %}
                         <div class="text-blue-500 font-semibold text-xs border border-blue-200 bg-blue-50 px-2 py-1 rounded shadow-sm" title="Importo pari a zero">🏷️ Da Prezzare</div>
                         {% endif %}
                         {% if appt.stato %}

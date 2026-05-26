@@ -2224,7 +2224,10 @@ def api_agenda():
             title = r['titolo']
         else:
             title = f"{r['targa']} - {r['tipo_impegno']}"
-            if not r['totale'] or float(r['totale']) == 0.0:
+            try:
+                if r['totale'] is None or str(r['totale']).strip() == '' or float(r['totale']) == 0.0:
+                    title += " 🏷️ [Da Prezzare]"
+            except ValueError:
                 title += " 🏷️ [Da Prezzare]"
 
         events.append({

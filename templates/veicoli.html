@@ -57,6 +57,9 @@
                                 <div class="bg-gray-800 text-white font-mono px-3 py-1 rounded-sm shadow-sm font-bold border border-gray-900 tracking-widest text-sm group-hover:bg-blue-800 transition-colors">
                                     {{ v.targa }}
                                 </div>
+                                {% if v.totale is none or v.totale == '' or v.totale|float == 0.0 %}
+                                <span class="ml-2 text-blue-500 font-semibold text-xs border border-blue-200 bg-blue-50 px-2 py-1 rounded shadow-sm" title="Importo pari a zero">🏷️ Da Prezzare</span>
+                                {% endif %}
                             </div>
                         </a>
                     </td>
