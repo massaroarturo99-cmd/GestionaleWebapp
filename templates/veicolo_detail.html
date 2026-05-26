@@ -172,9 +172,14 @@
                 <div class="mb-4">
                     <div class="flex justify-between items-end mb-1">
                         <label class="block text-gray-700 text-xs font-bold">Sostituzione</label>
-                        <button type="button" onclick="addSostituzioneRow()" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded shadow-sm hover:bg-blue-200">
-                            <i class="fas fa-plus"></i> Aggiungi Riga
-                        </button>
+                        <div class="space-x-2">
+                            <button type="button" onclick="importaDaRicambi()" class="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-1 rounded shadow-sm hover:bg-purple-200">
+                                <i class="fas fa-download"></i> Importa da Ricambi
+                            </button>
+                            <button type="button" onclick="addSostituzioneRow()" class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded shadow-sm hover:bg-blue-200">
+                                <i class="fas fa-plus"></i> Aggiungi Riga
+                            </button>
+                        </div>
                     </div>
 
                     <div id="sostituzione_container" class="space-y-2">
@@ -378,7 +383,7 @@
                         {% for r in ricambi %}
                         <div class="bg-white border rounded-lg p-3 shadow-sm">
                             <div class="flex justify-between items-start mb-2">
-                                <h5 class="font-bold text-gray-800 text-sm">{{ r.nome }}</h5>
+                                <h5 class="font-bold text-gray-800 text-sm ricambio-nome">{{ r.nome }}</h5>
                                 <form method="POST" action="/ricambio/{{ r.id }}/elimina" >
                                     <input type="hidden" name="ref" value="veicolo">
                                     <input type="hidden" name="veicolo_id" value="{{ veicolo.id }}">
@@ -516,6 +521,35 @@
     // --- END AUTOSAVE LOGIC ---
 
     // Funzione per aggiungere righe di sostituzione
+    function importaDaRicambi() {
+        const ricambiElements = document.querySelectorAll('.ricambio-nome');
+        const existingInputs = document.querySelectorAll('input[name="sost_desc[]"]');
+        const existingValues = Array.from(existingInputs).map(input => input.value.trim().toLowerCase());
+
+        let addedCount = 0;
+
+        ricambiElements.forEach(el => {
+            const nomeRicambio = el.textContent.trim();
+            if (nomeRicambio && !existingValues.includes(nomeRicambio.toLowerCase())) {
+                const container = document.getElementById('sostituzione_container');
+                const row = document.createElement('div');
+                row.className = 'flex space-x-2 items-center mt-2';
+                row.innerHTML = `
+                    <input type="text" name="sost_desc[]" class="appearance-none border rounded flex-1 py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Pezzo da sostituire...">
+                    <button type="button" onclick="this.parentElement.remove(); triggerAutosave();" class="text-red-500 hover:text-red-700 px-2"><i class="fas fa-trash"></i></button>
+                `;
+                row.querySelector('input').value = nomeRicambio;
+                container.appendChild(row);
+                existingValues.push(nomeRicambio.toLowerCase());
+                addedCount++;
+            }
+        });
+
+        if(addedCount > 0) {
+            triggerAutosave();
+        }
+    }
+
     function addSostituzioneRow() {
         const container = document.getElementById('sostituzione_container');
         const row = document.createElement('div');
