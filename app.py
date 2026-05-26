@@ -976,6 +976,8 @@ def veicoli_list():
 
     if filtro == 'preventivi':
         query += 'WHERE v.stato = "PREVENTIVO" '
+    elif filtro == 'attesa':
+        query += 'WHERE v.stato = "IN ATTESA" '
     elif filtro == 'sospesi':
         query += 'WHERE v.stato = "SOSPESO" '
     elif filtro == 'pagamenti':
@@ -1484,16 +1486,18 @@ def api_preventivo_rapido():
     marca = (data.get('marca') or '').upper()
     modello = (data.get('modello') or '').upper()
 
+    stato = 'PREVENTIVO'
     if not targa:
-        return jsonify({'success': False, 'error': 'Targa obbligatoria'}), 400
+        targa = '' # Avoid SQLite constraint errors
+        stato = 'IN ATTESA'
 
     if cliente_id and telefono:
         db.execute('UPDATE clienti SET telefono = ? WHERE id = ?', (telefono, cliente_id))
 
     cursor = db.execute('''
         INSERT INTO veicoli (targa, marca, modello, cliente_id, note_lavori, data_arrivo, stato)
-        VALUES (?, ?, ?, ?, ?, ?, 'PREVENTIVO')
-    ''', (targa, marca, modello, cliente_id, note_lavori, data_ora))
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (targa, marca, modello, cliente_id, note_lavori, data_ora, stato))
 
     nuovo_id = cursor.lastrowid
     sync_agenda_veicolo(db, nuovo_id)
