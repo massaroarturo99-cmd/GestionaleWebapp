@@ -693,11 +693,11 @@ def home():
 
     prossimi_appuntamenti = db.execute('''
         SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note,
-               targa, marca, modello, stato, cliente_nome, debito_totale
+               targa, marca, modello, stato, cliente_nome, debito_totale, totale
         FROM (
             SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno, a.note as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
-               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale, v.totale
             FROM agenda a
             LEFT JOIN veicoli v ON a.veicolo_id = v.id
             LEFT JOIN clienti c ON v.cliente_id = c.id
@@ -706,7 +706,7 @@ def home():
 
             SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
-               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale, v.totale
             FROM veicoli v
             LEFT JOIN clienti c ON v.cliente_id = c.id
             WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
@@ -2180,12 +2180,12 @@ def api_agenda():
 
     query = '''
         SELECT id, veicolo_id, titolo, data_ora, tipo_impegno, note, completato,
-               targa, marca, modello, stato, cliente_nome, debito_totale
+               targa, marca, modello, stato, cliente_nome, debito_totale, totale
         FROM (
             SELECT a.id as id, a.veicolo_id as veicolo_id, a.titolo as titolo, a.data_ora as data_ora, a.tipo_impegno as tipo_impegno,
                a.note as note, COALESCE(a.completato, 0) as completato,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
-               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale, v.totale
             FROM agenda a
             LEFT JOIN veicoli v ON a.veicolo_id = v.id
             LEFT JOIN clienti c ON v.cliente_id = c.id
@@ -2195,7 +2195,7 @@ def api_agenda():
             SELECT -v.id as id, v.id as veicolo_id, 'Consegna: ' || v.targa as titolo, v.data_consegna_prevista || 'T18:00' as data_ora, 'Uscita' as tipo_impegno, v.note_lavori as note,
                0 as completato,
                v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
-               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale
+               (SELECT SUM(totale - acconto) FROM veicoli WHERE targa = v.targa AND totale > acconto) as debito_totale, v.totale
             FROM veicoli v
             LEFT JOIN clienti c ON v.cliente_id = c.id
             WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
@@ -2224,6 +2224,8 @@ def api_agenda():
             title = r['titolo']
         else:
             title = f"{r['targa']} - {r['tipo_impegno']}"
+            if not r['totale'] or float(r['totale']) == 0.0:
+                title += " 🏷️ [Da Prezzare]"
 
         events.append({
             'id': r['id'],
