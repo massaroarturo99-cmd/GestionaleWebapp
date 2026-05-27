@@ -2315,5 +2315,20 @@ def api_agenda_elimina(id):
     db.commit()
     return jsonify({'success': True})
 
+
+@app.route('/veicolo/<int:id>/accetta', methods=['POST'])
+def veicolo_accetta(id):
+    db = get_db()
+    data = request.json or {}
+    targa = (data.get('targa') or '').upper().strip()
+
+    if not targa:
+        return jsonify({'success': False, 'error': 'Targa obbligatoria'}), 400
+
+    db.execute('UPDATE veicoli SET targa = ?, stato = "PREVENTIVO" WHERE id = ? AND stato = "IN ATTESA"', (targa, id))
+    db.commit()
+
+    return jsonify({'success': True})
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
