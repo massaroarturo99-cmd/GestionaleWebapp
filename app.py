@@ -2204,6 +2204,17 @@ def api_agenda():
             LEFT JOIN clienti c ON v.cliente_id = c.id
             WHERE v.data_consegna_prevista IS NOT NULL AND v.data_consegna_prevista != ''
             AND NOT EXISTS (SELECT 1 FROM agenda WHERE veicolo_id = v.id AND tipo_impegno = 'Uscita')
+
+            UNION ALL
+
+            SELECT -(v.id + 1000000) as id, v.id as veicolo_id, 'Ingresso: ' as titolo, v.data_arrivo as data_ora, 'Ingresso' as tipo_impegno, v.note_lavori as note,
+               0 as completato,
+               v.targa, v.marca, v.modello, v.stato, c.nome as cliente_nome,
+               0 as debito_totale, v.totale
+            FROM veicoli v
+            LEFT JOIN clienti c ON v.cliente_id = c.id
+            WHERE v.stato = 'IN ATTESA' AND v.data_arrivo IS NOT NULL AND v.data_arrivo != ''
+            AND NOT EXISTS (SELECT 1 FROM agenda WHERE veicolo_id = v.id AND tipo_impegno = 'Ingresso')
         )
         WHERE 1=1
     '''
@@ -2227,7 +2238,14 @@ def api_agenda():
             color = '#8b5cf6' # Purple for generic
             title = r['titolo']
         else:
-            title = f"{r['targa']} - {r['tipo_impegno']}"
+            if not r['targa'] or r['targa'].strip() == '':
+                # It's an 'IN ATTESA' appointment without a targa
+                cliente = r['cliente_nome'] or 'Cliente Sconosciuto'
+                modello = r['modello'] or ''
+                title = f"APPUNTAMENTO - {cliente} {modello}".strip()
+            else:
+                title = f"{r['targa']} - {r['tipo_impegno']}"
+
             try:
                 if r['totale'] is None or str(r['totale']).strip() == '' or float(r['totale']) == 0.0:
                     title += " 🏷️ [Da Prezzare]"
