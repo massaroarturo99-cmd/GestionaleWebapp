@@ -56,7 +56,8 @@ def get_or_create_temp_folder(service):
     return files[0].get('id')
 
 def get_or_create_vehicle_folder(service, root_folder_id, folder_name):
-    query = f"name = '{folder_name}' and '{root_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    safe_folder_name = folder_name.replace("'", "\\'")
+    query = f"name = '{safe_folder_name}' and '{root_folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
     response = service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
     files = response.get('files', [])
     if not files:
