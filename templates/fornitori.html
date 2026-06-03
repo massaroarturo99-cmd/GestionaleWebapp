@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block header_title %}Fornitori e Magazzini{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Colonna Nuova Registrazione -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-plus-circle text-blue-500"></i> Nuovo Fornitore</h3>
+
+            <form method="POST" action="/fornitore/nuovo">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Nome Fornitore *</label>
+                    <input required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="nome" type="text" placeholder="es. Vernici Auto Srl">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Categoria Fornitore</label>
+                    <select name="categoria" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="Materiale">Materiale</option>
+                        <option value="Ricambi">Ricambi</option>
+                        <option value="Varie">Varie</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Telefono</label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="telefono" type="text" placeholder="es. 081 1234567">
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Note</label>
+                    <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-1 focus:ring-blue-500" name="note" rows="3" placeholder="Informazioni aggiuntive..."></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow transition-colors">
+                    Salva Fornitore
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Colonna Lista Fornitori -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-truck text-gray-500"></i> Elenco Fornitori</h3>
+            </div>
+
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table class="min-w-full leading-normal">
+                    <thead class="sticky top-0 bg-white shadow-sm">
+                        <tr class="bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th class="px-5 py-3">Nome</th>
+                            <th class="px-5 py-3">Contatti</th>
+                            <th class="px-5 py-3 text-right">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in fornitori %}
+                        <tr class="hover:bg-blue-50 transition-colors border-b border-gray-200">
+                            <td class="px-5 py-4">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-gray-900 font-bold text-lg">{{ f.nome }}</p>
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                        {% if f.categoria == 'Materiale' %}bg-blue-100 text-blue-800
+                                        {% elif f.categoria == 'Ricambi' %}bg-green-100 text-green-800
+                                        {% elif f.categoria == 'Varie' %}bg-purple-100 text-purple-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ f.categoria or 'Materiale' }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">{{ f.note or '' }}</p>
+                            </td>
+                            <td class="px-5 py-4 whitespace-nowrap">
+                                <p class="text-gray-700"><i class="fas fa-phone-alt text-gray-400 mr-2"></i>{{ f.telefono or '-' }}</p>
+                            </td>
+                            <td class="px-5 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="/fornitore/{{ f.id }}" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-2 rounded-lg transition-colors inline-block mr-2" title="Apri Listino e Bolle">
+                                    <i class="fas fa-folder-open"></i> Gestisci
+                                </a>
+                                <form method="POST" action="/fornitore/{{ f.id }}/elimina" class="inline-block" >
+                                    <button type="submit" class="text-red-500 hover:text-red-800 p-2 bg-red-100 rounded transition-colors" title="Elimina Fornitore"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="px-5 py-8 text-center text-gray-500">Nessun fornitore registrato.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

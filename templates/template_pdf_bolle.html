@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 0; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 5px; vertical-align: top; text-align: left; }
+        .bordered th, .bordered td { border: 1px solid #aaa; }
+        .bg-light { background-color: #f4f4f4; font-weight: bold; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .section-title { font-size: 14px; font-weight: bold; background-color: #333; color: #fff; padding: 5px; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <table>
+        <tr>
+            <td width="60%">
+                <h2 style="margin: 0;">Massaro Group Carrozzeria</h2>
+                <p style="margin: 5px 0;">Via G. Marconi 64, 81030, Casapesenna (CE)<br>
+                Cell. 3246815628 | P.IVA 04583370616</p>
+            </td>
+            <td width="40%" class="text-right">
+                <h3 style="margin: 0; text-transform: uppercase;">ESTRATTO CONTO FORNITORE</h3>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>{{ fornitore }}</strong></p>
+                <p style="margin: 5px 0;">Data emissione: {{ data_odierna }}</p>
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title">RIEPILOGO BOLLE E PRODOTTI</div>
+    <p style="font-weight: bold; margin-top: 0; margin-bottom: 10px;">Filtro applicato: {{ periodo }}</p>
+
+    <table class="bordered">
+        <thead>
+            <tr>
+                <th width="15%" class="bg-light">Data Bolla</th>
+                <th width="20%" class="bg-light">Codice Bolla</th>
+                <th width="35%" class="bg-light">Prodotto</th>
+                <th width="10%" class="bg-light text-center">Q.tà</th>
+                <th width="20%" class="bg-light text-right">Totale Riga (€)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if righe %}
+                {% for r in righe %}
+                <tr>
+                    <td>{{ r['Data Bolla'] }}</td>
+                    <td>{{ r['Codice Bolla'] }}</td>
+                    <td>{{ r['Prodotto'] or 'Nessun prodotto' }}<br><span style="font-size:10px; color:#666;">{{ r['Note Bolla'] or '' }}</span></td>
+                    <td class="text-center">{{ r['Quantità'] or '-' }}</td>
+                    <td class="text-right">{{ "%.2f"|format(r['Totale Riga (€)'] or 0.0) }}</td>
+                </tr>
+                {% endfor %}
+                <!-- Riga Totale Globale -->
+                <tr>
+                    <td colspan="4" class="text-right bg-light" style="font-size: 14px;"><strong>TOTALE GLOBALE:</strong></td>
+                    <td class="text-right bg-light" style="font-size: 14px;"><strong>€ {{ "%.2f"|format(totale) }}</strong></td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">Nessun dato trovato per i criteri selezionati.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <p style="text-align: center; font-size: 10px; margin-top: 40px; color: #555;">
+        Documento generato automaticamente ad uso interno.
+    </p>
+
+</body>
+</html>

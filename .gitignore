@@ -1,0 +1,4 @@
+__pycache__/
+flask.log
+officina.db
+*.json

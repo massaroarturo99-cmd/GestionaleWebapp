@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale Officina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Regole per la stampa per nascondere la sidebar e stampare solo il contenuto */
+        @media print {
+            .no-print { display: none !important; }
+            .print-full-width { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans flex min-h-screen" x-data="{ sidebarOpen: false }">
+
+    <!-- Overlay per dispositivi mobili o quando la sidebar è aperta -->
+    <div x-show="sidebarOpen" x-transition.opacity
+         class="fixed inset-0 z-40 bg-gray-900 bg-opacity-50 "
+         @click="sidebarOpen = false" style="display: none;"></div>
+
+    <!-- Sidebar fissa/a scomparsa (Nascosta in fase di stampa) -->
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+           class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white flex flex-col no-print h-full transition-transform duration-300 ease-in-out flex-shrink-0">
+
+        <div class="p-6 flex justify-between items-center border-b border-gray-700 bg-gray-800">
+            <div class="flex flex-col items-start w-full">
+                <div class="flex justify-between w-full">
+                    <img src="/static/images/Logo_Bianco.jpeg" alt="Massaro Group Logo" class="h-12 bg-white rounded p-1 mb-2">
+                    <button @click="sidebarOpen = false" class="text-gray-400 hover:text-white ml-auto">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <h1 class="text-xl font-bold tracking-wider text-white">Massaro Group</h1>
+            </div>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            <a href="/" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-home w-5 text-center"></i>
+                <span>Home</span>
+            </a>
+
+            <div class="pt-4 pb-2">
+                <p class="text-xs uppercase text-gray-500 font-semibold pl-3">Gestione</p>
+            </div>
+
+            <a href="/veicoli" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-car w-5 text-center"></i>
+                <span>Veicoli</span>
+            </a>
+            <a href="/ricambi" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-box-open w-5 text-center"></i>
+                <span>Ricambi</span>
+            </a>
+            <a href="/clienti" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-users w-5 text-center"></i>
+                <span>Rubrica Clienti</span>
+            </a>
+            <a href="/fornitori" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors">
+                <i class="fas fa-truck w-5 text-center"></i>
+                <span>Fornitori e Bolle</span>
+            </a>
+        </nav>
+        <div class="p-4 border-t border-gray-700 text-sm text-gray-500 text-center">
+            &copy; 2024 Massaro Group
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-h-screen w-full print-full-width">
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center no-print relative z-10">
+            <div class="flex items-center space-x-4">
+                <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                    <i class="fas fa-wrench text-xl"></i>
+                </button>
+                <h2 class="text-xl font-semibold text-gray-800 hidden sm:block">
+                    {% block header_title %}Dashboard{% endblock %}
+                </h2>
+            </div>
+
+            <div class="flex items-center space-x-5">
+                <button @click="$dispatch('open-preventivo-rapido')" class="hidden sm:flex bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow transition-colors items-center space-x-2 text-sm">
+                    <i class="fas fa-calendar-plus"></i> <span>Appuntamento</span>
+                </button>
+                <span class="hidden md:inline text-gray-500 text-sm"><i class="fas fa-calendar-alt"></i> <span id="current-date"></span></span>
+
+                <!-- Notifiche Dropdown -->
+                <div class="relative" x-data="{ openNotif: false }">
+                    <button @click="openNotif = !openNotif" class="relative text-gray-500 hover:text-blue-600 focus:outline-none transition-colors mt-1">
+                        <i class="fas fa-bell text-xl"></i>
+                        {% if total_notifications and total_notifications > 0 %}
+                        <span class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-red-600 rounded-full">{{ total_notifications }}</span>
+                        {% endif %}
+                    </button>
+
+                    <div x-show="openNotif" @click.away="openNotif = false" x-transition class="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-50 border" style="display: none;">
+                        <div class="py-2">
+                            <div class="px-4 py-2 border-b bg-gray-50 text-sm font-bold text-gray-700">Notifiche Consegne</div>
+
+                            {% if total_notifications == 0 %}
+                                <div class="px-4 py-3 text-sm text-gray-500">Nessuna consegna imminente o in ritardo.</div>
+                            {% else %}
+                                <div class="max-h-64 overflow-y-auto">
+                                    {% if notifications.ritardo|length > 0 %}
+                                        <div class="px-4 py-1 bg-red-50 text-red-800 text-xs font-bold uppercase">In Ritardo</div>
+                                        {% for n in notifications.ritardo %}
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-exclamation-circle text-red-500 mr-2"></i>{{ n.nome }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if notifications.oggi|length > 0 %}
+                                        <div class="px-4 py-1 bg-yellow-50 text-yellow-800 text-xs font-bold uppercase">Consegna Oggi</div>
+                                        {% for n in notifications.oggi %}
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-calendar-day text-yellow-500 mr-2"></i>{{ n.nome }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+
+                                    {% if notifications.domani|length > 0 %}
+                                        <div class="px-4 py-1 bg-blue-50 text-blue-800 text-xs font-bold uppercase">Consegna Domani</div>
+                                        {% for n in notifications.domani %}
+                                        <a href="/veicolo/{{ n.id }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"><i class="fas fa-clock text-blue-500 mr-2"></i>{{ n.nome }}</a>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 border-l pl-4 border-gray-300">
+                    <a href="/" class="text-gray-500 hover:text-blue-600 transition-colors" title="Home">
+                        <i class="fas fa-home text-xl"></i>
+                    </a>
+                    <a href="/veicolo/nuovo" class="text-blue-500 hover:text-blue-700 transition-colors" title="Nuovo Veicolo">
+                        <i class="fas fa-plus-circle text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 p-6">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Modal Cliente Rapido Globale -->
+    <div x-data="{ openModalClienteRapido: false, formCliente: { nome: '', telefono: '', email: '' }, isSaving: false }"
+         @open-cliente-rapido.window="openModalClienteRapido = true"
+         x-show="openModalClienteRapido"
+         class="fixed inset-0 bg-gray-900 bg-opacity-75 z-[60] flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6" @click.away="!isSaving ? openModalClienteRapido = false : null">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold"><i class="fas fa-user-plus text-blue-500"></i> Nuovo Cliente Rapido</h3>
+                <button @click="openModalClienteRapido = false" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <form @submit.prevent="
+                isSaving = true;
+                fetch('/api/cliente_rapido', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formCliente)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        const select = document.getElementById('cliente_select');
+                        if (select) {
+                            const option = document.createElement('option');
+                            option.value = data.id;
+                            option.text = data.nome + (data.telefono ? ' (' + data.telefono + ')' : '');
+                            select.appendChild(option);
+                            select.value = data.id;
+                            // Trigger change for autosave
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        openModalClienteRapido = false;
+                        formCliente = { nome: '', telefono: '', email: '' };
+                    } else {
+                        alert('Errore: ' + data.error);
+                    }
+                })
+                .catch(err => { console.error(err); alert('Errore di rete'); })
+                .finally(() => { isSaving = false; })
+            ">
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Nome / Ragione Sociale *</label>
+                    <input x-model="formCliente.nome" required type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Telefono</label>
+                    <input x-model="formCliente.telefono" type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-xs font-bold mb-1">Email / Note</label>
+                    <input x-model="formCliente.email" type="text" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" @click="openModalClienteRapido = false" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition-colors text-sm">Annulla</button>
+                    <button type="submit" :disabled="isSaving" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded transition-colors text-sm flex items-center">
+                        <span x-show="!isSaving">Salva Cliente</span>
+                        <span x-show="isSaving"><i class="fas fa-spinner fa-spin mr-1"></i> Salvataggio...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Preventivo Rapido Globale -->
+    <div x-data="{
+            openModalPreventivoRapido: false,
+            clienti: [],
+            formPreventivo: { targa: '', marca: '', modello: '', cliente_id: '', telefono: '', note_lavori: '', data_ora: '' },
+            isSaving: false,
+            targaInfo: '',
+            sospesoBanner: null,
+            debounceTimer: null,
+
+            init() {
+                this.fetchClienti();
+            },
+            fetchClienti() {
+                fetch('/api/clienti')
+                    .then(r => r.json())
+                    .then(data => { this.clienti = data; });
+            },
+            checkTarga() {
+                clearTimeout(this.debounceTimer);
+                const targa = this.formPreventivo.targa.trim().toUpperCase();
+                if (targa.length < 5) {
+                    this.targaInfo = '';
+                    this.sospesoBanner = null;
+                    return;
+                }
+                this.debounceTimer = setTimeout(() => {
+                    fetch(`/api/verifica_vettura/${targa}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.esiste) {
+                                this.targaInfo = `Vettura nota. Ultimo ingresso: ${data.ultima_data}`;
+                                if (!this.formPreventivo.cliente_id && data.dati_veicolo.cliente_id) {
+                                    this.formPreventivo.cliente_id = data.dati_veicolo.cliente_id;
+                                    this.updateTelefono();
+                                }
+                                if (!this.formPreventivo.marca && data.dati_veicolo.marca) {
+                                    this.formPreventivo.marca = data.dati_veicolo.marca;
+                                }
+                                if (!this.formPreventivo.modello && data.dati_veicolo.modello) {
+                                    this.formPreventivo.modello = data.dati_veicolo.modello;
+                                }
+                                if (data.sospeso) {
+                                    this.sospesoBanner = data.sospeso;
+                                } else {
+                                    this.sospesoBanner = null;
+                                }
+                            } else {
+                                this.targaInfo = '';
+                                this.sospesoBanner = null;
+                            }
+                        });
+                }, 500);
+            },
+            updateTelefono() {
+                const c = this.clienti.find(c => c.id == this.formPreventivo.cliente_id);
+                if (c && c.telefono && !this.formPreventivo.telefono) {
+                    this.formPreventivo.telefono = c.telefono;
+                }
+            },
+            submitPreventivo() {
+                this.isSaving = true;
+                if(!this.formPreventivo.data_ora){
+                    let d = new Date();
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    this.formPreventivo.data_ora = d.toISOString().slice(0,16);
+                }
+                fetch('/api/preventivo_rapido', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.formPreventivo)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        window.location.href = '/veicolo/' + data.id;
+                    } else {
+                        alert('Errore: ' + data.error);
+                        this.isSaving = false;
+                    }
+                })
+                .catch(e => {
+                    alert('Errore di rete');
+                    this.isSaving = false;
+                });
+            }
+        }"
+         @open-preventivo-rapido.window="openModalPreventivoRapido = true; fetchClienti();"
+         x-show="openModalPreventivoRapido"
+         class="fixed inset-0 bg-gray-900 bg-opacity-75 z-[60] flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-screen overflow-y-auto" @click.away="!isSaving ? openModalPreventivoRapido = false : null">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold"><i class="fas fa-calendar-plus text-yellow-500"></i> Appuntamento / Ingresso</h3>
+                <button @click="openModalPreventivoRapido = false" class="text-gray-500 hover:text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+            <template x-if="sospesoBanner">
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4 shadow-sm">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-yellow-500">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-bold text-yellow-800">Attenzione: Sospeso Finanziario</h3>
+                            <div class="mt-1 text-sm text-yellow-700">Risulta un saldo pendente di <strong x-text="`€${sospesoBanner.restante.toFixed(2)}`"></strong> relativo alla pratica del <span x-text="sospesoBanner.data_sospeso"></span>.</div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <form @submit.prevent="submitPreventivo()">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Targa</label>
+                        <input x-model="formPreventivo.targa" @input="checkTarga()" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="AB123CD">
+                        <div x-show="targaInfo" x-text="targaInfo" class="text-xs text-green-600 mt-1 font-semibold" style="display:none;"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Marca</label>
+                            <input x-model="formPreventivo.marca" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="Es. Fiat">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Modello</label>
+                            <input x-model="formPreventivo.modello" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="Es. Panda">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Cliente</label>
+                            <select x-model="formPreventivo.cliente_id" @change="updateTelefono()" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Seleziona Cliente</option>
+                                <template x-for="c in clienti" :key="c.id">
+                                    <option :value="c.id" x-text="`${c.nome} ${c.telefono ? '('+c.telefono+')' : ''}`"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-xs font-bold mb-1">Telefono</label>
+                            <input x-model="formPreventivo.telefono" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="text" placeholder="Es. 333 1234567">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Data e Ora Appuntamento</label>
+                        <input x-model="formPreventivo.data_ora" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" type="datetime-local">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-xs font-bold mb-1">Note Lavori</label>
+                        <textarea x-model="formPreventivo.note_lavori" class="appearance-none border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24" placeholder="Dettagli problema, pezzi da ordinare..."></textarea>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button type="button" @click="openModalPreventivoRapido = false" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded mr-2" :disabled="isSaving">Annulla</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow flex items-center" :disabled="isSaving">
+                        <i class="fas fa-spinner fa-spin mr-2" x-show="isSaving"></i>
+                        <span x-text="isSaving ? 'Creazione...' : 'Crea Scheda'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    </script>
+</body>
+</html>
+<style>
+    /* Abilita scorrimento fluido su iOS */
+    body, main { -webkit-overflow-scrolling: touch; }
+</style>

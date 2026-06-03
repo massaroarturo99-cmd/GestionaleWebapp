@@ -1,0 +1,557 @@
+{% extends "base.html" %}
+
+{% block header_title %}Home - Riepilogo Officina{% endblock %}
+
+{% block content %}
+<div x-data="homeManager()" class="relative min-h-screen">
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+    <!-- Card Totale Veicoli -->
+    <a href="/veicoli" class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow block">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-semibold uppercase">Totale Veicoli Registrati</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ totale_veicoli }}</h3>
+            </div>
+            <div class="p-3 bg-blue-100 rounded-full text-blue-500">
+                <i class="fas fa-car fa-2x"></i>
+            </div>
+        </div>
+    </a>
+
+    <!-- Card Veicoli Presenti -->
+    <a href="/veicoli" class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500 hover:shadow-lg transition-shadow block">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-semibold uppercase">Veicoli presenti in carrozzeria</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ veicoli_presenti }}</h3>
+            </div>
+            <div class="p-3 bg-indigo-100 rounded-full text-indigo-500">
+                <i class="fas fa-warehouse fa-2x"></i>
+            </div>
+        </div>
+    </a>
+
+    <!-- Card Lavorazioni in Corso -->
+    <a href="/veicoli?filtro=lavorazione" class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow block">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-semibold uppercase">In Lavorazione</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ lavorazioni_attive }}</h3>
+            </div>
+            <div class="p-3 bg-green-100 rounded-full text-green-500">
+                <i class="fas fa-tools fa-2x"></i>
+            </div>
+        </div>
+    </a>
+
+    <!-- Card Preventivi -->
+    <a href="/veicoli?filtro=preventivi" class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-500 hover:shadow-lg transition-shadow block">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-semibold uppercase">Preventivi in Attesa</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ preventivi }}</h3>
+            </div>
+            <div class="p-3 bg-yellow-100 rounded-full text-yellow-500">
+                <i class="fas fa-file-invoice-dollar fa-2x"></i>
+            </div>
+        </div>
+    </a>
+
+    <!-- Card Sospesi -->
+    <a href="/veicoli?filtro=sospesi" class="bg-white rounded-xl shadow-md p-6 border-l-4 border-red-500 hover:shadow-lg transition-shadow block">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-semibold uppercase">Veicoli Sospesi</p>
+                <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ veicoli_sospesi }}</h3>
+            </div>
+            <div class="p-3 bg-red-100 rounded-full text-red-500">
+                <i class="fas fa-pause-circle fa-2x"></i>
+            </div>
+        </div>
+    </a>
+</div>
+
+<!-- Azioni Rapide -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Azioni Rapide</h3>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <a href="/veicolo/nuovo" class="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg shadow-sm">
+            <i class="fas fa-plus-circle"></i>
+            <span>Nuovo Veicolo</span>
+        </a>
+        <button @click="openTempGallery()" class="flex items-center justify-center space-x-2 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-4 px-6 rounded-lg transition-colors text-lg border border-purple-300">
+            <i class="fas fa-images"></i>
+            <span>Foto in Sospeso</span>
+        </button>
+        <a href="/ricambi" class="flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-4 px-6 rounded-lg transition-colors text-lg border border-gray-300">
+            <i class="fas fa-search"></i>
+            <span>Cerca Ricambi</span>
+        </a>
+        <a href="/veicoli?filtro=pagamenti" class="flex items-center justify-center space-x-2 bg-red-100 hover:bg-red-200 text-red-800 font-bold py-4 px-6 rounded-lg transition-colors text-lg border border-red-300">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Controllo Pagamenti</span>
+        </a>
+    </div>
+</div>
+
+<!-- Prossimi Appuntamenti -->
+<div class="bg-white rounded-xl shadow-md p-6 mt-8">
+    <div class="flex justify-between items-center mb-4 border-b pb-2">
+        <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-calendar-alt text-blue-500 mr-2"></i> Prossimi Appuntamenti / In Consegna</h3>
+        <a href="/agenda" class="text-sm font-semibold text-blue-600 hover:text-blue-800">Vedi Agenda Completa &rarr;</a>
+    </div>
+
+    <div class="space-y-3">
+        {% if prossimi_appuntamenti %}
+            {% for appt in prossimi_appuntamenti %}
+            <a {% if appt.veicolo_id %}href="/veicolo/{{ appt.veicolo_id }}"{% else %}href="/agenda"{% endif %} class="block border rounded-lg p-3 hover:bg-gray-50 transition-colors shadow-sm relative overflow-hidden group">
+                <!-- Accent border line based on tipo_impegno -->
+                <div class="absolute left-0 top-0 bottom-0 w-1 {% if appt.tipo_impegno == 'Ingresso' %}bg-blue-500{% else %}bg-green-500{% endif %}"></div>
+
+                <div class="flex justify-between items-center pl-2">
+                    <div class="flex items-center space-x-3">
+                        <div class="{% if appt.tipo_impegno == 'Ingresso' %}bg-blue-100 text-blue-600{% else %}bg-green-100 text-green-600{% endif %} w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                            <i class="fas {% if appt.tipo_impegno == 'Ingresso' %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                        </div>
+                        <div>
+                            {% if appt.targa %}
+                                <h4 class="font-bold text-gray-800 text-md">{{ appt.targa }} <span class="text-sm font-normal text-gray-600 ml-1">{{ appt.marca }} {{ appt.modello }}</span></h4>
+                            {% else %}
+                                <h4 class="font-bold text-gray-800 text-md">{{ appt.titolo }}</h4>
+                            {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="far fa-clock"></i> {{ appt.data_ora.replace('T', ' ')[:16] }} &bull; {{ appt.tipo_impegno }}
+                                {% if appt.cliente_nome %} &bull; <i class="far fa-user"></i> {{ appt.cliente_nome }}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        {% if appt.debito_totale and appt.debito_totale > 0 %}
+                        <div class="text-red-500 group-hover:text-red-600 transition-colors cursor-help" title="Attenzione: Sospeso di € {{ '%.2f'|format(appt.debito_totale) }}">
+                            <i class="fas fa-exclamation-triangle fa-lg"></i>
+                        </div>
+                        {% endif %}
+                        {% if appt.veicolo_id and (appt.totale is none or appt.totale == '' or appt.totale|float == 0.0) %}
+                        <div class="text-blue-500 font-semibold text-xs border border-blue-200 bg-blue-50 px-2 py-1 rounded shadow-sm" title="Importo pari a zero">🏷️ Da Prezzare</div>
+                        {% endif %}
+                        {% if appt.stato %}
+                        <div class="bg-gray-100 px-3 py-1 rounded text-xs font-semibold text-gray-600 border border-gray-200 uppercase">{{ appt.stato }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <p class="text-sm text-gray-500 italic py-4 text-center">Nessun appuntamento futuro in programma.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Floating Action Button for Camera -->
+<div class="fixed bottom-8 right-8 z-40">
+    <button @click="$refs.cameraInput.click()" class="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl transition-transform transform hover:scale-110">
+        <i x-show="!isCompressing" class="fas fa-plus fa-2x"></i>
+        <i x-show="isCompressing" class="fas fa-spinner fa-spin fa-2x"></i>
+    </button>
+    <input type="file" accept="image/*" multiple class="hidden" x-ref="cameraInput" @change="handleCameraUpload">
+</div>
+
+<!-- Modale Gestione Scatti Appena Fatti -->
+<div x-show="showScattiModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" @click.away="!isUploading ? showScattiModal = false : null">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 class="text-xl font-bold">Gestione Foto</h3>
+            <button @click="cancelUpload()" class="text-gray-500 hover:text-red-500 font-bold"><i class="fas fa-times"></i> Annulla</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-6">
+            <template x-for="(preview, index) in photoPreviews" :key="index">
+                <div class="relative aspect-square rounded overflow-hidden bg-gray-100 border group">
+                    <img :src="preview" class="object-cover w-full h-full">
+                    <button @click="removePhoto(index)" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-red-700 transition-colors">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="isUploading" class="text-center text-blue-600 font-bold my-4">
+            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+            <p>Caricamento su Drive in corso...</p>
+        </div>
+
+        <div x-show="!isUploading" class="space-y-4">
+            <button @click="$refs.cameraInput.click()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded border transition-colors flex items-center justify-center space-x-2">
+                <i class="fas fa-images"></i> <span>Aggiungi altre foto</span>
+            </button>
+
+            <div class="border-t pt-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Associa a Veicolo Esistente</label>
+                <div class="flex space-x-2">
+                    <select x-model="selectedVeicoloId" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none">
+                        <option value="">-- Seleziona --</option>
+                        {% for v in veicoli_attivi %}
+                            <option value="{{ v.id }}">{{ v.targa }} - {{ v.marca }} {{ v.modello }}</option>
+                        {% endfor %}
+                    </select>
+                    <button @click="assignToVehicle()" :disabled="!selectedVeicoloId" class="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded transition-colors">
+                        Associa
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 border-t pt-4">
+                <button @click="saveToTempAndCreateNew()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded shadow transition-colors text-sm">
+                    Crea Nuovo Veicolo
+                </button>
+                <button @click="saveToTempAndClose()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded shadow transition-colors text-sm">
+                    Salva in Temp
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Gestione Cartella Temp (Foto in Sospeso) -->
+<div x-show="showTempGallery" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4" style="display: none;">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 h-[90vh] flex flex-col" @click.away="!isLoadingTemp ? showTempGallery = false : null">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h3 class="text-xl font-bold"><i class="fas fa-images text-purple-600"></i> Foto in Sospeso</h3>
+            <button @click="showTempGallery = false" class="text-gray-500 hover:text-gray-800"><i class="fas fa-times fa-lg"></i></button>
+        </div>
+
+        <div x-show="isLoadingTemp" class="flex-grow flex items-center justify-center text-purple-600 font-bold">
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin fa-3x mb-4"></i>
+                <p>Sincronizzazione con Google Drive in corso...</p>
+            </div>
+        </div>
+
+        <div x-show="!isLoadingTemp" class="flex-grow flex flex-col overflow-hidden mb-4 border rounded bg-gray-50">
+            <div x-show="tempPhotos.length > 0" class="p-3 border-b bg-white flex justify-between items-center shrink-0">
+                <label class="flex items-center space-x-2 cursor-pointer text-sm font-bold text-gray-700 hover:text-blue-600 transition-colors">
+                    <input type="checkbox" class="form-checkbox h-4 w-4 text-blue-600 rounded"
+                           :checked="selectedTempPhotoIds.length === tempPhotos.length && tempPhotos.length > 0"
+                           @change="toggleSelectAllTempPhotos($event)">
+                    <span>Seleziona Tutto</span>
+                </label>
+                <span class="text-xs text-gray-500" x-show="selectedTempPhotoIds.length > 0">
+                    <span x-text="selectedTempPhotoIds.length"></span> foto selezionate
+                </span>
+            </div>
+
+            <div class="flex-grow overflow-y-auto p-4" style="-webkit-overflow-scrolling: touch;">
+                <div x-show="tempPhotos.length === 0" class="text-center text-gray-500 py-8">
+                    Nessuna foto in sospeso trovata.
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <template x-for="photo in tempPhotos" :key="photo.id">
+                    <div class="relative border rounded bg-white shadow-sm overflow-hidden" @click="togglePhotoSelection(photo.id)">
+                        <img :src="`/api/preview_drive_image/${photo.id}`" class="object-cover w-full aspect-square cursor-pointer hover:opacity-75 transition-opacity">
+                        <div class="absolute top-2 left-2">
+                            <div class="w-6 h-6 rounded-full border-2 border-white flex items-center justify-center"
+                                 :class="selectedTempPhotoIds.includes(photo.id) ? 'bg-blue-600' : 'bg-gray-400 bg-opacity-50'">
+                                <i class="fas fa-check text-white text-xs" x-show="selectedTempPhotoIds.includes(photo.id)"></i>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="!isLoadingTemp && tempPhotos.length > 0" class="border-t pt-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Seleziona un veicolo a cui spostare le <span x-text="selectedTempPhotoIds.length"></span> foto selezionate:</label>
+            <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+                <div class="w-full">
+                    <select id="tempVehicleSelect" x-model="tempSelectedVeicoloId" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none select2-enable">
+                        <option value="">-- Seleziona Veicolo --</option>
+                        {% for v in veicoli_attivi %}
+                            <option value="{{ v.id }}">{{ v.targa }} - {{ v.marca }} {{ v.modello }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex space-x-2">
+                    <button @click="moveSelectedToVehicle()" :disabled="selectedTempPhotoIds.length === 0 || !tempSelectedVeicoloId || isMoving" class="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-2 px-6 rounded transition-colors whitespace-nowrap h-[38px]">
+                        <span x-show="!isMoving">Sposta Foto</span>
+                        <span x-show="isMoving"><i class="fas fa-spinner fa-spin"></i> Spostamento...</span>
+                    </button>
+                    <button @click="deleteSelectedTempPhotos()" :disabled="selectedTempPhotoIds.length === 0 || isDeleting" class="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded transition-colors whitespace-nowrap h-[38px]" title="Elimina definitivamente">
+                        <span x-show="!isDeleting"><i class="fas fa-trash"></i> Elimina</span>
+                        <span x-show="isDeleting"><i class="fas fa-spinner fa-spin"></i></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+function homeManager() {
+    return {
+        // Modal Scatti
+        showScattiModal: false,
+        filesToUpload: [],
+        photoPreviews: [],
+        isUploading: false,
+        isCompressing: false,
+        selectedVeicoloId: '',
+
+        // Modal Temp
+        showTempGallery: false,
+        isLoadingTemp: false,
+        tempPhotos: [],
+        selectedTempPhotoIds: [],
+        tempSelectedVeicoloId: '',
+        isMoving: false,
+        isDeleting: false,
+
+        async handleCameraUpload(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            this.isCompressing = true;
+            const newFiles = Array.from(files);
+
+            try {
+                const processedFiles = await Promise.all(newFiles.map(file => {
+                    return new Promise((resolve) => {
+                        if (!file.type.startsWith('image/')) {
+                            resolve({ file: file, preview: URL.createObjectURL(file) });
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = (e) => {
+                            const img = new Image();
+                            img.src = e.target.result;
+                            img.onload = () => {
+                                const MAX_DIM = 1600;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height && width > MAX_DIM) {
+                                    height *= MAX_DIM / width;
+                                    width = MAX_DIM;
+                                } else if (height > MAX_DIM) {
+                                    width *= MAX_DIM / height;
+                                    height = MAX_DIM;
+                                }
+
+                                const canvas = document.createElement('canvas');
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                canvas.toBlob((blob) => {
+                                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+                                    resolve({ file: compressedFile, preview: canvas.toDataURL('image/jpeg', 0.8) });
+                                }, 'image/jpeg', 0.8);
+                            };
+                        };
+                    });
+                }));
+
+                // Merge with existing files
+                this.filesToUpload = [...this.filesToUpload, ...processedFiles.map(p => p.file)];
+                this.photoPreviews = [...this.photoPreviews, ...processedFiles.map(p => p.preview)];
+
+                this.showScattiModal = true;
+            } catch (error) {
+                console.error("Errore durante la compressione", error);
+                alert("Errore durante l'ottimizzazione delle foto.");
+            } finally {
+                this.isCompressing = false;
+                this.$refs.cameraInput.value = ''; // Reset input
+            }
+        },
+
+        removePhoto(index) {
+            this.photoPreviews.splice(index, 1);
+            this.filesToUpload.splice(index, 1);
+            if (this.filesToUpload.length === 0) {
+                this.cancelUpload();
+            }
+        },
+
+        cancelUpload() {
+            this.showScattiModal = false;
+            this.filesToUpload = [];
+            this.photoPreviews = [];
+            this.$refs.cameraInput.value = '';
+        },
+
+        async _uploadToTempFolder() {
+            this.isUploading = true;
+            const formData = new FormData();
+            this.filesToUpload.forEach(file => formData.append('foto', file));
+
+            try {
+                const res = await fetch('/api/upload_temp', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert('Errore caricamento in Temp');
+                }
+                return data; // Returns the full JSON object including uploaded_ids
+            } catch (err) {
+                console.error(err);
+                alert('Errore di rete durante il caricamento');
+                return false;
+            } finally {
+                this.isUploading = false;
+            }
+        },
+
+        async assignToVehicle() {
+            if (!this.selectedVeicoloId) return;
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
+                // Since they are now in temp, immediately assign them.
+                // We need to fetch the temp folder again or we can do a trick:
+                // Actually it's cleaner to just upload directly to temp, then call the move API.
+                // But since we don't have the newly uploaded IDs returned by the simplistic API,
+                // we'll just redirect to the vehicle page and let the user manage it there,
+                // or we could enhance the API. For simplicity here:
+                this.showScattiModal = false;
+                window.location.href = `/veicolo/${this.selectedVeicoloId}`;
+            }
+        },
+
+        async saveToTempAndCreateNew() {
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
+                this.showScattiModal = false;
+                let url = '/veicolo/nuovo';
+                if (data.uploaded_ids && data.uploaded_ids.length > 0) {
+                    url += '?temp_ids=' + data.uploaded_ids.join(',');
+                }
+                window.location.href = url;
+            }
+        },
+
+        async saveToTempAndClose() {
+            const data = await this._uploadToTempFolder();
+            if (data && data.success) {
+                this.showScattiModal = false;
+                this.filesToUpload = [];
+                this.photoPreviews = [];
+                // Reset input
+                this.$refs.cameraInput.value = '';
+            }
+        },
+
+        async openTempGallery() {
+            this.showTempGallery = true;
+            this.isLoadingTemp = true;
+            this.selectedTempPhotoIds = [];
+            this.tempSelectedVeicoloId = '';
+
+            try {
+                const res = await fetch('/api/temp_photos');
+                const data = await res.json();
+                this.tempPhotos = data.photos || [];
+            } catch (err) {
+                console.error(err);
+                alert('Errore caricamento foto in sospeso');
+            } finally {
+                this.isLoadingTemp = false;
+            }
+        },
+
+        togglePhotoSelection(id) {
+            const index = this.selectedTempPhotoIds.indexOf(id);
+            if (index > -1) {
+                this.selectedTempPhotoIds.splice(index, 1);
+            } else {
+                this.selectedTempPhotoIds.push(id);
+            }
+        },
+
+        toggleSelectAllTempPhotos(event) {
+            if (event.target.checked) {
+                this.selectedTempPhotoIds = this.tempPhotos.map(photo => photo.id);
+            } else {
+                this.selectedTempPhotoIds = [];
+            }
+        },
+
+        async moveSelectedToVehicle() {
+            if (this.selectedTempPhotoIds.length === 0 || !this.tempSelectedVeicoloId) return;
+
+            this.isMoving = true;
+            try {
+                const res = await fetch('/api/assign_temp_photos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        veicolo_id: this.tempSelectedVeicoloId,
+                        photo_ids: this.selectedTempPhotoIds
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Remove moved photos from array
+                    this.tempPhotos = this.tempPhotos.filter(p => !this.selectedTempPhotoIds.includes(p.id));
+                    this.selectedTempPhotoIds = [];
+                    this.tempSelectedVeicoloId = '';
+
+                    // Chiudi il modale e notifica
+                    this.showTempGallery = false;
+                    alert(`${data.moved} foto spostate con successo!`);
+                } else {
+                    alert('Errore durante lo spostamento: ' + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Errore di rete');
+            } finally {
+                this.isMoving = false;
+            }
+        },
+
+        async deleteSelectedTempPhotos() {
+            if (this.selectedTempPhotoIds.length === 0) return;
+
+            if (!confirm(`Sei sicuro di voler eliminare ${this.selectedTempPhotoIds.length} foto in modo definitivo?`)) {
+                return;
+            }
+
+            this.isDeleting = true;
+            try {
+                const res = await fetch('/api/delete_temp_photos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        photo_ids: this.selectedTempPhotoIds
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Remove deleted photos from array
+                    this.tempPhotos = this.tempPhotos.filter(p => !this.selectedTempPhotoIds.includes(p.id));
+                    this.selectedTempPhotoIds = [];
+
+                    alert(`${data.deleted} foto eliminate con successo!`);
+                } else {
+                    alert('Errore durante l\'eliminazione: ' + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Errore di rete');
+            } finally {
+                this.isDeleting = false;
+            }
+        }
+    }
+}
+</script>
+{% endblock %}
